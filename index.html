@@ -310,6 +310,14 @@
       });
       localStorage.setItem("alyazi-password-reset-requests", JSON.stringify(requests));
       successEl.textContent = "Request sent. Ask your Super Admin to reset your password.";
+      // This page runs before login, so there's no sync engine here yet —
+      // push straight to the cloud so the request reaches the Super
+      // Admin's device even if this one never opens the billing page.
+      fetch("/api/sync/d1", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ data: { "alyazi-password-reset-requests": JSON.stringify(requests) } }),
+      }).catch(function() {});
     });
   </script>
 </body>

@@ -100,6 +100,20 @@ async function upsertSales(db, snapshot) {
   }
 }
 
+async function upsertResetRequests(db, snapshot) {
+  const requests = safeParse(snapshot["alyazi-password-reset-requests"]);
+  if (!Array.isArray(requests)) return;
+  const stmts = requests
+    .filter(reqst => reqst && reqst.id)
+    .map(reqst => db.prepare(
+      `INSERT INTO password_reset_requests (legacy_id, user_id, user_name, role, requested_at)
+       VALUES (?1, ?2, ?3, ?4, ?5)
+       ON CONFLICT(legacy_id) DO NOTHING`
+    ).bind(reqst.id, reqst.userId ?? null, reqst.userName ?? "", reqst.role ?? "",
+      reqst.requestedAt ?? new Date().toISOString()));
+  if (stmts.length) await db.batch(stmts);
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env.BILLING_DB) return json({ ok: false, error: "not_configured" }, 500);
   const body = await request.json().catch(() => null);
@@ -111,7 +125,18 @@ export async function onRequestPost({ request, env }) {
   await upsertCategories(db, body.data);
   await upsertBookings(db, body.data);
   await upsertSales(db, body.data);
+  await upsertResetRequests(db, body.data);
   return json({ ok: true, updatedAt: Date.now() });
+}
+
+// Called the moment Super Admin resolves a request, so it stops reappearing
+// from other devices' next sync push instead of waiting on a full re-sync.
+export async function onRequestDelete({ request, env }) {
+  if (!env.BILLING_DB) return json({ ok: false, error: "not_configured" }, 500);
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return json({ ok: false, error: "missing_id" }, 400);
+  await env.BILLING_DB.prepare("DELETE FROM password_reset_requests WHERE legacy_id = ?1").bind(Number(id)).run();
+  return json({ ok: true });
 }
 
 export async function onRequestGet({ env }) {
@@ -146,6 +171,11 @@ export async function onRequestGet({ env }) {
     });
   }
 
+  const resetRequestRows = await db.prepare("SELECT * FROM password_reset_requests ORDER BY id").all();
+  const resetRequests = resetRequestRows.results.map(row => ({
+    id: row.legacy_id, userId: row.user_id, userName: row.user_name, role: row.role, requestedAt: row.requested_at,
+  }));
+
   // An empty array is a real JS value, not "no data" — sending "[]" would
   // make the client think D1 has an authoritative (empty) answer and skip
   // its own seed defaults. Send null instead when a table has nothing yet.
@@ -158,6 +188,7 @@ export async function onRequestGet({ env }) {
       "alyazi-categories-v1": orNull(categories),
       "alyazi-bookings-v1": orNull(bookings),
       "alyazi-sales-v1": orNull(sales),
+      "alyazi-password-reset-requests": orNull(resetRequests),
     },
   });
 }

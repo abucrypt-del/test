@@ -75,6 +75,19 @@ CREATE TABLE IF NOT EXISTS sale_items (
   quantity INTEGER NOT NULL
 );
 
+-- Cross-device inbox: a staff member's "forgot password" tap happens on
+-- their own device before they're ever logged in, and the Super Admin
+-- checks the notification bell on a different device entirely — this
+-- table is what actually lets the request reach them.
+CREATE TABLE IF NOT EXISTS password_reset_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  legacy_id INTEGER UNIQUE,
+  user_id INTEGER,
+  user_name TEXT NOT NULL,
+  role TEXT,
+  requested_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
 CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);
 CREATE INDEX IF NOT EXISTS idx_bookings_datetime ON bookings(datetime);

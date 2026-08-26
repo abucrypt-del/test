@@ -1644,6 +1644,7 @@ document.querySelector("#reset-requests-list").addEventListener("click", event =
     const user = users.find(u => u.id === userId);
     if (user) { user.password = newPassword; saveUsers(); }
     saveResetRequests(getResetRequests().filter(r => r.id !== requestId));
+    fetch(`/api/sync/d1?id=${requestId}`, { method: "DELETE" }).catch(() => {});
     showToast(`Password reset for ${user ? user.name : "user"}`);
     renderResetRequests();
   });
@@ -1982,6 +1983,31 @@ function formatSyncTime(ts) {
   return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+// Unlike the other synced data, reset requests need a live pull, not just
+// hydrate-when-empty on load — the Super Admin's device already has data
+// (even if empty), and a request submitted mid-session from someone else's
+// device needs to actually show up in the notification bell.
+async function pullResetRequestsIfSuperAdmin() {
+  if (currentUser.role !== "Super Admin") return;
+  try {
+    const resp = await fetch("/api/sync/d1");
+    if (!resp.ok) return;
+    const result = await resp.json();
+    const remoteRaw = result?.data?.["alyazi-password-reset-requests"];
+    if (!remoteRaw) return;
+    const remoteRequests = JSON.parse(remoteRaw);
+    const local = getResetRequests();
+    const localIds = new Set(local.map(reqst => reqst.id));
+    const fresh = remoteRequests.filter(reqst => !localIds.has(reqst.id));
+    if (fresh.length) {
+      saveResetRequests([...local, ...fresh]);
+      renderResetRequests();
+    }
+  } catch (err) {
+    // best effort — next sync cycle will retry
+  }
+}
+
 async function runSync({ manual = false } = {}) {
   if (syncInFlight) return;
   const snapshot = collectSyncSnapshot();
@@ -2003,6 +2029,7 @@ async function runSync({ manual = false } = {}) {
     } catch (err) {
       cloudOk = false;
     }
+    await pullResetRequestsIfSuperAdmin();
 
     if (syncStatus) {
       syncStatus.textContent = cloudOk
