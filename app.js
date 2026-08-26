@@ -25,7 +25,6 @@ let menuItems = JSON.parse(localStorage.getItem("alyazi-menu-en-v6") || "null") 
 const order = new Map();
 let orderMode = "Dine In";
 let kotState = "not-sent";
-let kotReadyPending = localStorage.getItem("alyazi-kot-status") === "ready";
 let kitchenPrepStartedAt = null;
 let kitchenPrepTimer = null;
 let paymentMethod = "Cash";
@@ -87,6 +86,47 @@ function syncCurrentCabinOrder() {
   saveCabins();
 }
 
+function getKots() {
+  return JSON.parse(localStorage.getItem("alyazi-kots-v1") || "{}");
+}
+
+function saveKots(kots) {
+  localStorage.setItem("alyazi-kots-v1", JSON.stringify(kots));
+}
+
+// Each cabin runs its own kitchen order independently. This reads the
+// shared kots map (written by kitchen.html) and updates every cabin's own
+// kotState, so switching cabins never inherits another cabin's status.
+function syncKotStatusFromStorage() {
+  const kots = getKots();
+  cabins.forEach(cabin => {
+    const kot = kots[cabin.id];
+    if (!kot) return;
+    const derivedState = kot.status === "ready" ? "completed" : kot.status;
+    if (derivedState === cabin.kotState) return;
+    const wasReady = cabin.kotState === "completed";
+    cabin.kotState = derivedState;
+
+    if (cabin.id === currentCabinId) {
+      kotState = derivedState;
+      if (derivedState === "accepted") {
+        kitchenPrepStartedAt = kot.acceptedAt || Date.now();
+        startKitchenPrepTimer();
+      } else if (derivedState === "completed") {
+        stopKitchenPrepTimer();
+        document.querySelector("#checkout-label").textContent = "Collect payment";
+        document.querySelector("#workflow-banner").hidden = false;
+        document.querySelector("#workflow-banner").textContent = "YOUR ORDER READY · Kitchen completed this order · Payment is now available";
+        document.querySelector("#kot-status").textContent = "Your order is ready";
+      }
+      renderOrder();
+    } else if (derivedState === "completed" && !wasReady) {
+      showToast(`${cabin.name}'s order is ready`);
+    }
+  });
+  saveCabins();
+}
+
 function switchCabin(cabinId) {
   const currentCabin = getCabinData(currentCabinId);
   if (currentCabin) {
@@ -99,18 +139,18 @@ function switchCabin(cabinId) {
     saveCabins();
   }
   currentCabinId = cabinId;
+  syncKotStatusFromStorage();
   const newCabin = getCabinData(cabinId);
   order.clear();
   newCabin.order.forEach((value, key) => order.set(key, value));
   currentOrderGuestName = newCabin.guestName;
   currentOrderGuestPhone = newCabin.guestPhone;
-  const persistedKotState = localStorage.getItem("alyazi-kot-status");
-  kotState = persistedKotState === "accepted" || persistedKotState === "ready" || persistedKotState === "sent" ? persistedKotState : newCabin.kotState;
+  kotState = newCabin.kotState;
   billState = newCabin.billState;
   orderMode = newCabin.orderMode;
   if (kotState === "accepted") {
-    const acceptedAt = Number(localStorage.getItem("alyazi-kot-accepted-at") || Date.now());
-    kitchenPrepStartedAt = acceptedAt;
+    const kot = getKots()[cabinId];
+    kitchenPrepStartedAt = (kot && kot.acceptedAt) || Date.now();
     startKitchenPrepTimer();
   } else {
     stopKitchenPrepTimer();
@@ -125,19 +165,19 @@ function switchCabin(cabinId) {
 }
 
 function restoreActiveCabin() {
+  syncKotStatusFromStorage();
   const cabin = getCabinData(currentCabinId);
   if (!cabin) return;
   order.clear();
   cabin.order.forEach((value, key) => order.set(key, value));
   currentOrderGuestName = cabin.guestName;
   currentOrderGuestPhone = cabin.guestPhone;
-  const persistedKotState = localStorage.getItem("alyazi-kot-status");
-  kotState = persistedKotState === "accepted" || persistedKotState === "ready" || persistedKotState === "sent" ? persistedKotState : cabin.kotState;
+  kotState = cabin.kotState;
   billState = cabin.billState;
   orderMode = cabin.orderMode;
   if (kotState === "accepted") {
-    const acceptedAt = Number(localStorage.getItem("alyazi-kot-accepted-at") || Date.now());
-    kitchenPrepStartedAt = acceptedAt;
+    const kot = getKots()[currentCabinId];
+    kitchenPrepStartedAt = (kot && kot.acceptedAt) || Date.now();
     startKitchenPrepTimer();
   }
   document.querySelector("#guest-name").value = currentOrderGuestName;
@@ -174,6 +214,9 @@ function closeCabin(cabinId) {
   cabin.kotState = "not-sent";
   cabin.orderMode = "Dine In";
   saveCabins();
+  const kots = getKots();
+  delete kots[cabinId];
+  saveKots(kots);
   showToast(`${cabin.name} closed`);
   switchCabin(1);
 }
@@ -354,7 +397,7 @@ function updateKitchenPrepTimer() {
     if (workflowBanner) workflowBanner.hidden = kotState !== "completed" && kotState !== "accepted";
     return;
   }
-  const startTime = Number(localStorage.getItem("alyazi-kot-accepted-at") || kitchenPrepStartedAt || Date.now());
+  const startTime = kitchenPrepStartedAt || Date.now();
   kitchenPrepStartedAt = startTime;
   const elapsedSeconds = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
   const timerValue = formatDuration(elapsedSeconds);
@@ -369,8 +412,7 @@ function updateKitchenPrepTimer() {
 
 function startKitchenPrepTimer() {
   stopKitchenPrepTimer();
-  const acceptedAt = Number(localStorage.getItem("alyazi-kot-accepted-at") || Date.now());
-  kitchenPrepStartedAt = acceptedAt;
+  if (!kitchenPrepStartedAt) kitchenPrepStartedAt = Date.now();
   updateKitchenPrepTimer();
   kitchenPrepTimer = setInterval(updateKitchenPrepTimer, 1000);
 }
@@ -458,11 +500,15 @@ function sendKot() {
   if (!order.size || kotState !== "not-sent") return;
   const settings = JSON.parse(localStorage.getItem("alyazi-printers") || "{}");
   const integrations = JSON.parse(localStorage.getItem("alyazi-integrations") || "{}");
-  localStorage.setItem("alyazi-kot-current", JSON.stringify({ items: [...order.values()], mode: orderMode, createdAt: new Date().toISOString() }));
+  const cabin = getCabinData(currentCabinId);
+  const kots = getKots();
+  kots[currentCabinId] = { cabinId: currentCabinId, cabinName: cabin.name, items: [...order.values()], mode: orderMode, status: "sent", createdAt: new Date().toISOString() };
+  saveKots(kots);
   printTicket("KOT");
   openWhatsApp(integrations.kitchenWhatsapp || "", buildOrderMessage("KITCHEN ORDER / KOT"));
   kotState = "sent";
-  localStorage.setItem("alyazi-kot-status", "sent");
+  cabin.kotState = "sent";
+  saveCabins();
   document.querySelector("#kot-status").textContent = "KOT sent - waiting for kitchen";
   document.querySelector("#send-kot span").textContent = "KOT sent & printed";
   document.querySelector("#kot-status").insertAdjacentHTML("afterend", `<button class="complete-kot" id="complete-kot">Mark KOT complete</button>`);
@@ -473,8 +519,12 @@ function sendKot() {
 function completeKot() {
   if (kotState !== "sent") return;
   kotState = "completed";
-  localStorage.setItem("alyazi-kot-status", "completed");
-  localStorage.removeItem("alyazi-kot-accepted-at");
+  const cabin = getCabinData(currentCabinId);
+  cabin.kotState = "completed";
+  saveCabins();
+  const kots = getKots();
+  delete kots[currentCabinId];
+  saveKots(kots);
   document.querySelector("#kot-status").textContent = "KOT completed - ready for billing";
   document.querySelector("#complete-kot")?.remove();
   document.querySelector("#checkout-label").textContent = "Collect payment";
@@ -689,7 +739,15 @@ voiceMenuButton.addEventListener("pointerleave", stopVoiceMenuCommand);
 voiceMenuButton.addEventListener("pointercancel", stopVoiceMenuCommand);
 voiceMenuButton.addEventListener("keydown", event => { if (event.key === " " || event.key === "Enter") { event.preventDefault(); startVoiceMenuCommand(); } });
 voiceMenuButton.addEventListener("keyup", event => { if (event.key === " " || event.key === "Enter") { event.preventDefault(); stopVoiceMenuCommand(); } });
-document.querySelector("#open-kitchen-display").addEventListener("click", () => { const integrations = JSON.parse(localStorage.getItem("alyazi-integrations") || "{}"); localStorage.setItem("alyazi-kot-current", JSON.stringify({ items: [...order.values()], mode: orderMode, createdAt: new Date().toISOString() })); window.open(integrations.kitchenDisplayUrl || "kitchen.html", "_blank", "noopener"); });
+document.querySelector("#open-kitchen-display").addEventListener("click", () => {
+  const integrations = JSON.parse(localStorage.getItem("alyazi-integrations") || "{}");
+  const cabin = getCabinData(currentCabinId);
+  const kots = getKots();
+  const existing = kots[currentCabinId];
+  kots[currentCabinId] = { cabinId: currentCabinId, cabinName: cabin.name, items: [...order.values()], mode: orderMode, status: existing?.status || "sent", createdAt: existing?.createdAt || new Date().toISOString(), acceptedAt: existing?.acceptedAt };
+  saveKots(kots);
+  window.open(integrations.kitchenDisplayUrl || "kitchen.html", "_blank", "noopener");
+});
 
 document.querySelector("#close-payment").addEventListener("click", () => { document.querySelector("#payment-modal").hidden = true; });
 document.querySelectorAll(".payment-method").forEach(button => button.addEventListener("click", () => { document.querySelector(".payment-method.active").classList.remove("active"); button.classList.add("active"); paymentMethod = button.dataset.payment; updateUpiQr(); }));
@@ -767,44 +825,8 @@ document.querySelector("#save-integrations").addEventListener("click", () => { l
 document.querySelector("#upi-account-form").addEventListener("submit", event => { event.preventDefault(); const account = { id: Date.now(), name: document.querySelector("#new-upi-name").value.trim(), bank: document.querySelector("#new-upi-bank").value.trim(), upiId: document.querySelector("#new-upi-id").value.trim(), enabled: true }; upiAccounts.push(account); selectedUpiId = account.id; saveUpiAccounts(); event.target.reset(); showToast(`${account.name} linked`); });
 document.querySelector("#upi-accounts-list").addEventListener("change", event => { if (!event.target.dataset.upiToggle) return; const account = upiAccounts.find(item => item.id === Number(event.target.dataset.upiToggle)); account.enabled = event.target.checked; saveUpiAccounts(); });
 document.querySelector("#upi-accounts-list").addEventListener("click", event => { if (!event.target.dataset.deleteUpi) return; upiAccounts = upiAccounts.filter(item => item.id !== Number(event.target.dataset.deleteUpi)); selectedUpiId = upiAccounts.find(item => item.enabled)?.id || null; saveUpiAccounts(); showToast("UPI account removed"); });
-function syncKotStatusFromStorage() {
-  const kitchenStatus = localStorage.getItem("alyazi-kot-status");
-  if (!kitchenStatus) return;
-
-  if (kitchenStatus === "accepted") {
-    kotState = "accepted";
-    const acceptedAt = Number(localStorage.getItem("alyazi-kot-accepted-at") || Date.now());
-    kitchenPrepStartedAt = acceptedAt;
-    startKitchenPrepTimer();
-    renderOrder();
-    return;
-  }
-
-  if (kitchenStatus === "ready") {
-    kotState = "completed";
-    stopKitchenPrepTimer();
-    localStorage.removeItem("alyazi-kot-accepted-at");
-    document.querySelector("#checkout-label").textContent = "Collect payment";
-    document.querySelector("#workflow-banner").hidden = false;
-    document.querySelector("#workflow-banner").textContent = "YOUR ORDER READY · Kitchen completed this order · Payment is now available";
-    document.querySelector("#kot-status").textContent = "Your order is ready";
-    renderOrder();
-    return;
-  }
-
-  if (kitchenStatus === "sent" && kotState === "accepted") {
-    kotState = "sent";
-    stopKitchenPrepTimer();
-    kitchenPrepStartedAt = null;
-    renderOrder();
-  }
-}
-
 window.addEventListener("storage", event => {
-  if (event.key === "alyazi-kot-status") {
-    syncKotStatusFromStorage();
-    if (event.newValue === "completed" && kotState === "sent") completeKot();
-  }
+  if (event.key === "alyazi-kots-v1") syncKotStatusFromStorage();
 });
 document.querySelectorAll(".test-button").forEach(button => button.addEventListener("click", () => showToast(`${button.dataset.printer === "network" ? "Network" : "Wired"} test print sent`)));
 const addMenuForm = document.querySelector("#add-menu-form");

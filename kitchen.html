@@ -86,53 +86,67 @@
       }, KITCHEN_ALERT_DURATION_MS);
     }
 
+    function getKots() {
+      return JSON.parse(localStorage.getItem("alyazi-kots-v1") || "{}");
+    }
+
+    function saveKots(kots) {
+      localStorage.setItem("alyazi-kots-v1", JSON.stringify(kots));
+    }
+
     function render() {
-      const kot = JSON.parse(localStorage.getItem("alyazi-kot-current") || "null");
+      const kots = getKots();
+      // A cabin's ticket disappears from the kitchen screen once marked
+      // ready — that's the kitchen's job done; billing takes it from there.
+      const active = Object.values(kots).filter(kot => kot.status === "sent" || kot.status === "accepted");
       const list = document.querySelector("#kot-list");
       const body = document.body;
-      if (!kot || !kot.items?.length) {
+
+      if (!active.length) {
         list.innerHTML = '<div class="empty"><strong>No active kitchen orders</strong>New KOTs will appear here automatically.</div>';
         body.classList.remove("kitchen-alerting");
         stopKitchenAlert();
         return;
       }
 
-      const printedAt = kot.printedAt || kot.createdAt;
-      const sentAt = kot.sentAt || kot.createdAt;
-      const isAlerting = Date.now() - new Date(kot.createdAt).getTime() < KITCHEN_ALERT_DURATION_MS;
-      body.classList.toggle("kitchen-alerting", isAlerting);
-      const currentStatus = localStorage.getItem("alyazi-kot-status");
-      const isAccepted = currentStatus === "accepted";
-      list.innerHTML = `<div class="kot-grid"><article class="kot-card ${isAlerting ? "alerting" : ""}"><div class="kot-card-header"><strong>${kot.cabin || "Table 14"}</strong><span>${kot.mode} · KOT</span></div><div class="kot-items">${kot.items.map(item => `<div class="kot-item"><strong>${item.quantity} × ${item.name}</strong><span>${money(item.price * item.quantity)}</span></div>`).join("")}</div><div class="kot-footer">KOT printed ${formatKotTime(printedAt)} · Sent ${formatKotTime(sentAt)}<br>Order received ${formatKotTime(kot.createdAt)}<button class="ready" onclick="${isAccepted ? "complete()" : "acceptOrder()"}">${isAccepted ? "Mark order ready" : "Accept order"}</button></div></article></div>`;
+      active.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      const isAnyAlerting = active.some(kot => Date.now() - new Date(kot.createdAt).getTime() < KITCHEN_ALERT_DURATION_MS);
+      body.classList.toggle("kitchen-alerting", isAnyAlerting);
 
-      if (isAlerting) {
+      list.innerHTML = `<div class="kot-grid">${active.map(kot => {
+        const isAlerting = Date.now() - new Date(kot.createdAt).getTime() < KITCHEN_ALERT_DURATION_MS;
+        const isAccepted = kot.status === "accepted";
+        return `<article class="kot-card ${isAlerting ? "alerting" : ""}"><div class="kot-card-header"><strong>${kot.cabinName || "Table 14"}</strong><span>${kot.mode} · KOT</span></div><div class="kot-items">${kot.items.map(item => `<div class="kot-item"><strong>${item.quantity} × ${item.name}</strong><span>${money(item.price * item.quantity)}</span></div>`).join("")}</div><div class="kot-footer">Order received ${formatKotTime(kot.createdAt)}<button class="ready" onclick="${isAccepted ? `complete(${kot.cabinId})` : `acceptOrder(${kot.cabinId})`}">${isAccepted ? "Mark order ready" : "Accept order"}</button></div></article>`;
+      }).join("")}</div>`;
+
+      if (isAnyAlerting) {
         startKitchenAlert();
       } else {
         stopKitchenAlert();
       }
     }
 
-    function acceptOrder() {
-      const kot = JSON.parse(localStorage.getItem("alyazi-kot-current") || "null");
-      if (!kot || !kot.items?.length) return;
-      localStorage.setItem("alyazi-kot-status", "accepted");
-      localStorage.setItem("alyazi-kot-accepted-at", String(Date.now()));
-      localStorage.setItem("alyazi-kot-state-message", JSON.stringify({ timestamp: Date.now(), type: "accepted" }));
+    function acceptOrder(cabinId) {
+      const kots = getKots();
+      const kot = kots[cabinId];
+      if (!kot) return;
+      kot.status = "accepted";
+      kot.acceptedAt = Date.now();
+      saveKots(kots);
       render();
     }
 
-    function complete() {
-      const kot = JSON.parse(localStorage.getItem("alyazi-kot-current") || "null");
-      if (!kot || !kot.items?.length) return;
-      localStorage.setItem("alyazi-kot-status", "ready");
-      localStorage.setItem("alyazi-kot-ready-notification", JSON.stringify({ timestamp: Date.now(), type: "ready" }));
-      localStorage.removeItem("alyazi-kot-accepted-at");
-      localStorage.removeItem("alyazi-kot-current");
+    function complete(cabinId) {
+      const kots = getKots();
+      const kot = kots[cabinId];
+      if (!kot) return;
+      kot.status = "ready";
+      saveKots(kots);
       render();
     }
 
     window.addEventListener("storage", event => {
-      if (event.key === "alyazi-kot-current" || event.key === "alyazi-kot-status") render();
+      if (event.key === "alyazi-kots-v1") render();
     });
 
     document.addEventListener("pointerdown", unlockAudio, { once: true });
