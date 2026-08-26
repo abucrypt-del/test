@@ -19,7 +19,7 @@ export async function onRequestPost({ request, env }) {
   );
 
   const origin = new URL(request.url).origin;
-  const link = `${origin}/reset.html?token=${token}`;
+  const link = `${origin}/reset?token=${token}`;
   const from = env.RESET_EMAIL_FROM || "Al Yazi Mandi <onboarding@resend.dev>";
 
   const emailResp = await fetch("https://api.resend.com/emails", {
