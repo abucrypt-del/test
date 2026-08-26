@@ -49,7 +49,7 @@ let upiAccounts = JSON.parse(localStorage.getItem("alyazi-upi-accounts-v1") || "
 let selectedUpiId = upiAccounts[0]?.id || null;
 let printSettings = JSON.parse(localStorage.getItem("alyazi-print-settings-v1") || "null") || { header: "AL YAZI MANDI RESTRAUNT", phone: "", whatsapp: "", address: "", footer: "Thank you for dining with us", showLogo: true, showTax: true, showOrderType: true };
 printSettings.whatsapp = printSettings.whatsapp || "";
-let users = JSON.parse(localStorage.getItem("alyazi-users-v1") || "null") || [{ id: 1, name: "Restaurant Owner", email: "owner@alyazi.com", phone: "", role: "Super Admin", password: "admin123" }];
+let users = JSON.parse(localStorage.getItem("alyazi-users-v1") || "null") || [{ id: 1, name: "abu", email: "owner@alyazi.com", phone: "", role: "Super Admin", password: "admin123" }];
 users = users.map(user => ({ ...user, password: user.password || "admin123" }));
 // Restore session or redirect to login
 let currentUser = (function() {
