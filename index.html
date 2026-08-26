@@ -33,47 +33,29 @@
       justify-content: center;
       padding: 20px;
     }
-    .login-banner {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: fit-content;
-      max-width: 100%;
-      margin: 0 auto 24px;
-      padding: 20px clamp(24px, 8vw, 44px);
-      border-radius: 14px;
-      background: linear-gradient(160deg, #10160f, #1c2620 55%, #233026);
-      border: 1px solid rgba(199,149,69,.35);
-      box-shadow: 0 0 0 1px rgba(199,149,69,.12), 0 0 30px rgba(199,149,69,.28), 0 18px 46px rgba(0,0,0,.35);
-      animation: banner-glow 3.2s ease-in-out infinite, rise .35s ease;
+    .login-brand {
+      text-align: center;
+      margin: 0 auto 22px;
+      animation: rise .35s ease;
     }
     .login-logo-wrap {
-      position: relative;
-      width: min(230px, 60vw);
+      width: min(240px, 65vw);
+      margin: 0 auto;
     }
-    .login-logo-glow {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: auto;
-      mix-blend-mode: screen;
-      filter: blur(6px) brightness(1.15) sepia(.6) saturate(2) hue-rotate(-6deg);
-      animation: logo-glow-pulse 3.2s ease-in-out infinite;
-    }
-    .login-banner-logo {
-      position: relative;
+    .login-brand-logo {
       display: block;
       width: 100%;
       height: auto;
-      mix-blend-mode: screen;
+      filter: invert(1);
+      mix-blend-mode: multiply;
     }
-    @keyframes banner-glow {
-      0%, 100% { box-shadow: 0 0 0 1px rgba(199,149,69,.12), 0 0 30px rgba(199,149,69,.28), 0 18px 46px rgba(0,0,0,.35); }
-      50% { box-shadow: 0 0 0 1px rgba(199,149,69,.24), 0 0 52px rgba(199,149,69,.52), 0 18px 46px rgba(0,0,0,.35); }
-    }
-    @keyframes logo-glow-pulse {
-      0%, 100% { opacity: .2; }
-      50% { opacity: .4; }
+    .login-brand-tagline {
+      margin-top: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
     }
     .login-card {
       width: min(420px, 100%);
@@ -128,11 +110,11 @@
 </head>
 <body>
   <div class="login-card">
-    <div class="login-banner">
+    <div class="login-brand">
       <div class="login-logo-wrap">
-        <img class="login-logo-glow" src="al-yazi-mandi-logo.png" alt="" aria-hidden="true" />
-        <img class="login-banner-logo" src="al-yazi-mandi-logo.png" alt="AL YAZI MANDI RESTRAUNT" />
+        <img class="login-brand-logo" src="al-yazi-mandi-logo.png" alt="Al Yazi Mandi" />
       </div>
+      <div class="login-brand-tagline">Restaurant</div>
     </div>
     <h1 class="login-heading" hidden></h1>
     <p class="login-sub">Sign in to access the restaurant workspace.</p>
