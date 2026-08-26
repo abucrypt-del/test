@@ -54,7 +54,6 @@ let selectedUpiId = upiAccounts[0]?.id || null;
 let printSettings = JSON.parse(localStorage.getItem("alyazi-print-settings-v1") || "null") || { header: "AL YAZI MANDI RESTRAUNT", phone: "", whatsapp: "", address: "", footer: "Thank you for dining with us", showLogo: true, showTax: true, showOrderType: true };
 printSettings.whatsapp = printSettings.whatsapp || "";
 printSettings.headerAlign = printSettings.headerAlign || "center";
-printSettings.infoAlign = printSettings.infoAlign || "center";
 printSettings.footerAlign = printSettings.footerAlign || "center";
 let users = JSON.parse(localStorage.getItem("alyazi-users-v1") || "null") || [{ id: 1, name: "abu", email: "owner@alyazi.com", phone: "", role: "Super Admin", password: "admin123" }];
 users = users.map(user => ({ ...user, password: user.password || "admin123" }));
@@ -684,8 +683,8 @@ function loadPrintSettings() {
   document.querySelector("#print-show-order-type").checked = printSettings.showOrderType;
 }
 
-function buildReceiptPreviewHtml(headerAlign, infoAlign, footerAlign) {
-  return `<div style="text-align:${headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}<h1>${printSettings.header || "AL YAZI MANDI RESTRAUNT"}</h1>${printSettings.address ? `<p>${printSettings.address}</p>` : ""}${printSettings.phone ? `<p>Ph: ${printSettings.phone}</p>` : ""}</div><hr><div style="text-align:${infoAlign}"><h2>RECEIPT</h2><p>Guest: Sample Guest | 9999999999</p><p>Order type: Dine In</p><p>Cabin 1</p><p>Order #1001</p><p>${new Date().toLocaleString()}</p></div><hr><div class="print-line"><span>1 x Mutton Yemeni Mandi</span><strong>₹395.00</strong></div><div class="print-line"><span>1 x Chicken Alfaham Mandi</span><strong>₹270.00</strong></div><hr><div class="print-line"><span>Subtotal</span><strong>₹665.00</strong></div><div class="print-line print-total"><span>Total</span><strong>₹719.86</strong></div>${printSettings.footer ? `<hr><div style="text-align:${footerAlign}"><p>${printSettings.footer}</p></div>` : ""}`;
+function buildReceiptPreviewHtml(headerAlign, footerAlign) {
+  return `<div style="text-align:${headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}<h1>${printSettings.header || "AL YAZI MANDI RESTRAUNT"}</h1>${printSettings.address ? `<p>${printSettings.address}</p>` : ""}${printSettings.phone ? `<p>Ph: ${printSettings.phone}</p>` : ""}</div><hr><div style="text-align:center"><h2>RECEIPT</h2></div><div class="print-line"><span>Guest</span><span>Sample Guest 9999999999</span></div><div class="print-line"><span>Order type</span><span>Dine In</span></div><div class="print-line"><span>Table</span><span>Cabin 1</span></div><div class="print-line"><span>Order #</span><span>1001</span></div><div class="print-line"><span>Date</span><span>${new Date().toLocaleString()}</span></div><hr><div class="print-line"><span>1 x Mutton Yemeni Mandi</span><strong>₹395.00</strong></div><div class="print-line"><span>1 x Chicken Alfaham Mandi</span><strong>₹270.00</strong></div><hr><div class="print-line"><span>Subtotal</span><strong>₹665.00</strong></div><div class="print-line print-total"><span>Total</span><strong>₹719.86</strong></div>${printSettings.footer ? `<hr><div style="text-align:${footerAlign}"><p>${printSettings.footer}</p></div>` : ""}`;
 }
 
 function getReceiptLayoutDraft() {
@@ -700,7 +699,7 @@ function getReceiptLayoutDraft() {
 function renderReceiptLayoutPreview() {
   const draft = getReceiptLayoutDraft();
   document.querySelector("#receipt-layout-preview").innerHTML =
-    buildReceiptPreviewHtml(draft.headerAlign, draft.infoAlign, draft.footerAlign);
+    buildReceiptPreviewHtml(draft.headerAlign, draft.footerAlign);
 }
 
 function renderReceiptLayoutEditor() {
@@ -727,7 +726,6 @@ document.querySelectorAll("#receipt-layout-card .align-buttons button").forEach(
 document.querySelector("#save-receipt-layout").addEventListener("click", () => {
   const draft = getReceiptLayoutDraft();
   printSettings.headerAlign = draft.headerAlign;
-  printSettings.infoAlign = draft.infoAlign;
   printSettings.footerAlign = draft.footerAlign;
   localStorage.setItem("alyazi-print-settings-v1", JSON.stringify(printSettings));
   showToast("Receipt layout saved");
@@ -920,10 +918,10 @@ function renderPrintSheet(type, isReprint = false, itemsOverride = null) {
   const tax = taxableAmount * .0825;
   const total = taxableAmount + tax;
   const safe = value => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const guestInfo = currentOrderGuestName || currentOrderGuestPhone ? `<p>Guest: ${safe(currentOrderGuestName)} ${currentOrderGuestPhone ? `| ${safe(currentOrderGuestPhone)}` : ""}</p>` : "";
+  const guestInfo = currentOrderGuestName || currentOrderGuestPhone ? `<div class="print-line"><span>Guest</span><span>${safe(currentOrderGuestName)}${currentOrderGuestPhone ? ` ${safe(currentOrderGuestPhone)}` : ""}</span></div>` : "";
   const receiptType = type === "bill" ? (isReprint ? "--- COPY ---" : "--- ORIGINAL ---") : "";
   const activeCabin = getCabinData(currentCabinId);
-  const locationLine = activeCabin && activeCabin.type === "takeaway" ? `<p style="font-size:16px; font-weight:bold;">TOKEN #${safe(activeCabin.token)}</p>` : `<p>${activeCabin ? safe(activeCabin.name) : "Dine In"}</p>`;
+  const locationLine = activeCabin && activeCabin.type === "takeaway" ? `<div class="print-line"><span>Token</span><strong style="font-size:16px;">#${safe(activeCabin.token)}</strong></div>` : `<div class="print-line"><span>Table</span><span>${activeCabin ? safe(activeCabin.name) : "Dine In"}</span></div>`;
   let orderNumberLine = "";
   if (type === "bill" && activeCabin) {
     if (!activeCabin.orderNumber) {
@@ -932,9 +930,11 @@ function renderPrintSheet(type, isReprint = false, itemsOverride = null) {
       saveOrderCounter();
       saveCabins();
     }
-    orderNumberLine = `<p>Order #${activeCabin.orderNumber}</p>`;
+    orderNumberLine = `<div class="print-line"><span>Order #</span><span>${activeCabin.orderNumber}</span></div>`;
   }
-  const html = `<div style="text-align:${printSettings.headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}<h1>${safe(printSettings.header)}</h1>${printSettings.address ? `<p>${safe(printSettings.address)}</p>` : ""}${printSettings.phone ? `<p>Ph: ${safe(printSettings.phone)}</p>` : ""}${printSettings.whatsapp ? `<p>WhatsApp: ${safe(printSettings.whatsapp)}</p>` : ""}</div><hr><div style="text-align:${printSettings.infoAlign}"><h2>${type === "KOT" ? (itemsOverride ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT") : "RECEIPT"}</h2>${receiptType ? `<p style="font-weight:bold;">${receiptType}</p>` : ""}${guestInfo}${printSettings.showOrderType ? `<p>Order type: ${safe(orderMode)}</p>` : ""}${locationLine}${orderNumberLine}<p>${new Date().toLocaleString()}</p></div><hr>${items.map(item => `<div class="print-line"><span>${item.quantity} x ${safe(item.name)}</span><strong>${money(item.price * item.quantity)}</strong></div>`).join("")}${type === "KOT" ? "" : `<hr><div class="print-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>${discountAmount > 0 ? `<div class="print-line"><span>Discount</span><strong>-${money(discountAmount)}</strong></div>` : ""}${printSettings.showTax ? `<div class="print-line"><span>Tax (8.25%)</span><strong>${money(tax)}</strong></div>` : ""}<div class="print-line print-total"><span>Total</span><strong>${money(total)}</strong></div>`}${printSettings.footer ? `<hr><div style="text-align:${printSettings.footerAlign}"><p>${safe(printSettings.footer)}</p></div>` : ""}`;
+  const orderTypeLine = printSettings.showOrderType ? `<div class="print-line"><span>Order type</span><span>${safe(orderMode)}</span></div>` : "";
+  const dateLine = `<div class="print-line"><span>Date</span><span>${new Date().toLocaleString()}</span></div>`;
+  const html = `<div style="text-align:${printSettings.headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}<h1>${safe(printSettings.header)}</h1>${printSettings.address ? `<p>${safe(printSettings.address)}</p>` : ""}${printSettings.phone ? `<p>Ph: ${safe(printSettings.phone)}</p>` : ""}${printSettings.whatsapp ? `<p>WhatsApp: ${safe(printSettings.whatsapp)}</p>` : ""}</div><hr><div style="text-align:center"><h2>${type === "KOT" ? (itemsOverride ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT") : "RECEIPT"}</h2>${receiptType ? `<p style="font-weight:bold;">${receiptType}</p>` : ""}</div>${guestInfo}${orderTypeLine}${locationLine}${orderNumberLine}${dateLine}<hr>${items.map(item => `<div class="print-line"><span>${item.quantity} x ${safe(item.name)}</span><strong>${money(item.price * item.quantity)}</strong></div>`).join("")}${type === "KOT" ? "" : `<hr><div class="print-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>${discountAmount > 0 ? `<div class="print-line"><span>Discount</span><strong>-${money(discountAmount)}</strong></div>` : ""}${printSettings.showTax ? `<div class="print-line"><span>Tax (8.25%)</span><strong>${money(tax)}</strong></div>` : ""}<div class="print-line print-total"><span>Total</span><strong>${money(total)}</strong></div>`}${printSettings.footer ? `<hr><div style="text-align:${printSettings.footerAlign}"><p>${safe(printSettings.footer)}</p></div>` : ""}`;
   document.querySelector("#print-sheet").innerHTML = html;
   if (type === "bill" && !isReprint) {
     printedBills.push({ html: html.replace("--- ORIGINAL ---", "--- COPY ---"), createdAt: new Date().toISOString(), guest: currentOrderGuestName, phone: currentOrderGuestPhone, total, originalHtml: html });
