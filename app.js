@@ -1421,7 +1421,12 @@ document.querySelectorAll(".settings-tab").forEach(tab => tab.addEventListener("
   if (tab.dataset.settingsTab === "bookings") renderBookingsList();
 }));
 document.querySelectorAll(".report-range").forEach(button => button.addEventListener("click", () => { document.querySelector(".report-range.active").classList.remove("active"); button.classList.add("active"); document.querySelector("#custom-range").hidden = button.dataset.range !== "custom"; if (button.dataset.range !== "custom") renderSales(button.dataset.range); }));
-document.querySelector("#apply-custom-report").addEventListener("click", () => renderSales("custom", document.querySelector("#report-from").value, document.querySelector("#report-to").value));
+document.querySelector("#apply-custom-report").addEventListener("click", () => {
+  const fromDate = document.querySelector("#report-from").value;
+  const toDate = document.querySelector("#report-to").value;
+  if (fromDate && toDate && fromDate > toDate) { showToast("\"From\" date must be before \"To\" date"); return; }
+  renderSales("custom", fromDate, toDate);
+});
 document.querySelector("#export-sales").addEventListener("click", () => {
   if (!hasSettingsActionAccess(currentUser.role, "sales", "export")) { showToast("You don't have permission to export sales reports"); return; }
   if (!reportExportSales.length) { showToast("No sales in this report range"); return; }
