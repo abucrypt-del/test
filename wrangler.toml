@@ -1,0 +1,11 @@
+name = "alyazi-billing-app"
+compatibility_date = "2026-08-25"
+
+[[env.production.kv_namespaces]]
+id = "REDACTED-KV-NAMESPACE-ID"
+binding = "AUTH_KV"
+
+[[env.production.d1_databases]]
+binding = "BILLING_DB"
+database_name = "alyazi-billing-db"
+database_id = "REDACTED-D1-DATABASE-ID"

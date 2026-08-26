@@ -248,7 +248,37 @@
     </section>
   </div>
   <div id="print-sheet" aria-hidden="true"></div>
+  <div class="sync-widget">
+    <button type="button" id="sync-button" class="sync-button" title="Sync now" aria-label="Sync now">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+    </button>
+    <span class="sync-status" id="sync-status">Not synced yet</span>
+  </div>
   <div class="toast" id="toast" role="status"></div>
+  <script>
+    // Hydrate an empty browser (new device, cleared storage) from the D1
+    // cloud copy before app.js's synchronous localStorage reads run. Only
+    // fills in keys that are missing locally — never overwrites an existing
+    // session's not-yet-synced edits. Synchronous XHR is intentional here:
+    // it must finish before the next <script> tag executes.
+    (function hydrateFromCloud() {
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "/api/sync/d1", false);
+        xhr.send(null);
+        if (xhr.status !== 200) return;
+        var resp = JSON.parse(xhr.responseText);
+        if (!resp || !resp.ok || !resp.data) return;
+        Object.keys(resp.data).forEach(function(key) {
+          if (resp.data[key] != null && localStorage.getItem(key) == null) {
+            localStorage.setItem(key, resp.data[key]);
+          }
+        });
+      } catch (err) {
+        // Cloud unreachable — proceed with whatever's cached locally.
+      }
+    })();
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="app.js?v=25"></script>
 </body>

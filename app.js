@@ -1778,3 +1778,94 @@ renderCabinTabs();
 renderLoginUsers();
 updateSession();
 renderUpiAccounts();
+
+// --- Sync: snapshots all alyazi-* localStorage keys into IndexedDB every
+// 20s and on demand, then best-effort mirrors the same snapshot to the
+// AUTH_KV-backed cloud endpoint. Cloud failures never block the local save.
+const SYNC_DB_NAME = "alyazi-sync";
+const SYNC_STORE_NAME = "snapshots";
+const SYNC_RECORD_KEY = "latest";
+let lastSyncedSnapshot = null;
+let syncInFlight = false;
+
+function collectSyncSnapshot() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("alyazi-")) data[key] = localStorage.getItem(key);
+  }
+  return data;
+}
+
+function openSyncDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(SYNC_DB_NAME, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(SYNC_STORE_NAME);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveSnapshotLocally(data, updatedAt) {
+  const db = await openSyncDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(SYNC_STORE_NAME, "readwrite");
+    tx.objectStore(SYNC_STORE_NAME).put({ data, updatedAt }, SYNC_RECORD_KEY);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function saveSnapshotToCloud(data, updatedAt) {
+  const resp = await fetch("/api/sync/d1", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ data, updatedAt }),
+  });
+  if (!resp.ok) throw new Error("cloud sync failed");
+}
+
+function formatSyncTime(ts) {
+  return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+async function runSync({ manual = false } = {}) {
+  if (syncInFlight) return;
+  const snapshot = collectSyncSnapshot();
+  const snapshotString = JSON.stringify(snapshot);
+  if (!manual && snapshotString === lastSyncedSnapshot) return;
+
+  syncInFlight = true;
+  const syncButton = document.querySelector("#sync-button");
+  const syncStatus = document.querySelector("#sync-status");
+  syncButton?.classList.add("syncing");
+  try {
+    const updatedAt = Date.now();
+    await saveSnapshotLocally(snapshot, updatedAt);
+    lastSyncedSnapshot = snapshotString;
+
+    let cloudOk = true;
+    try {
+      await saveSnapshotToCloud(snapshot, updatedAt);
+    } catch (err) {
+      cloudOk = false;
+    }
+
+    if (syncStatus) {
+      syncStatus.textContent = cloudOk
+        ? `Synced ${formatSyncTime(updatedAt)}`
+        : `Saved locally ${formatSyncTime(updatedAt)} — cloud unreachable`;
+    }
+    if (manual) showToast(cloudOk ? "Synced to cloud and saved locally" : "Saved locally — couldn't reach the cloud");
+  } catch (err) {
+    if (manual) showToast("Sync failed — check your browser storage");
+  } finally {
+    syncInFlight = false;
+    syncButton?.classList.remove("syncing");
+  }
+}
+
+document.querySelector("#sync-button")?.addEventListener("click", () => runSync({ manual: true }));
+setInterval(() => runSync({ manual: false }), 20000);
+runSync({ manual: false });
