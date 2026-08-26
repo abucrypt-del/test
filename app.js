@@ -589,6 +589,7 @@ function saveRolePermissions(permissions) {
 }
 
 function hasSettingsPageAccess(role, page) {
+  if (page === "my-sales") return true;
   if (role === "Super Admin") return true;
   const permissions = getRolePermissions();
   return !!(permissions[role] && permissions[role][page] && permissions[role][page].view);
@@ -803,6 +804,30 @@ function renderSales(range = "day", fromDate = "", toDate = "") {
   if (!rankedItems.length) { bestSellers.innerHTML = `<div class="best-sellers-empty">Complete a payment to see menu sales rankings.</div>`; return; }
   const highestQuantity = rankedItems[0][1].quantity;
   bestSellers.innerHTML = rankedItems.map(([name, stats], index) => `<div class="best-seller-row"><span class="rank">${index + 1}</span><div class="best-seller-info"><strong>${name}</strong><div class="rank-bar"><i style="width:${stats.quantity / highestQuantity * 100}%"></i></div></div><span class="sold-count">${stats.quantity} sold</span><strong class="sold-revenue">${money(stats.revenue)}</strong></div>`).join("");
+}
+
+// Personal sales view, available to every role — scoped to the logged-in
+// user's own orders only, unlike renderSales() which is full-restaurant
+// revenue and stays Super Admin only.
+function renderMySales(range = "day") {
+  const now = new Date();
+  let from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  if (range === "week") from.setDate(from.getDate() - 6);
+  if (range === "month") from.setDate(1);
+  const filtered = sales.filter(sale => sale.user === currentUser.name && new Date(sale.createdAt) >= from && new Date(sale.createdAt) <= to);
+  const total = filtered.reduce((sum, sale) => sum + sale.total, 0);
+  document.querySelector("#my-report-total").textContent = money(total);
+  document.querySelector("#my-report-orders").textContent = filtered.length;
+  document.querySelector("#my-report-average").textContent = money(filtered.length ? total / filtered.length : 0);
+  const bucketCount = range === "day" ? 1 : range === "week" ? 7 : new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const buckets = Array.from({ length: bucketCount }, (_, index) => {
+    const date = new Date(from); date.setDate(from.getDate() + index);
+    const dayTotal = filtered.filter(sale => new Date(sale.createdAt).toDateString() === date.toDateString()).reduce((sum, sale) => sum + sale.total, 0);
+    return { label: range === "day" ? "Sales" : range === "month" ? date.getDate() : date.toLocaleDateString([], { weekday: "short" }), total: dayTotal };
+  });
+  const maximum = Math.max(...buckets.map(bucket => bucket.total), 1);
+  document.querySelector("#my-sales-chart").innerHTML = buckets.map(bucket => `<div class="chart-column"><strong>${money(bucket.total)}</strong><div class="chart-bar" style="height:${Math.max(bucket.total / maximum * 100, bucket.total ? 8 : 2)}%"></div><span>${bucket.label}</span></div>`).join("");
 }
 
 function formatDuration(totalSeconds) {
@@ -1417,10 +1442,18 @@ document.querySelectorAll(".settings-tab").forEach(tab => tab.addEventListener("
   document.querySelectorAll(".settings-view").forEach(view => view.classList.remove("active"));
   document.querySelector(`#${tab.dataset.settingsTab}-view`).classList.add("active");
   if (tab.dataset.settingsTab === "sales") renderSales();
+  if (tab.dataset.settingsTab === "my-sales") renderMySales();
   if (tab.dataset.settingsTab === "receipts") renderReceiptHistory();
   if (tab.dataset.settingsTab === "bookings") renderBookingsList();
 }));
-document.querySelectorAll(".report-range").forEach(button => button.addEventListener("click", () => { document.querySelector(".report-range.active").classList.remove("active"); button.classList.add("active"); document.querySelector("#custom-range").hidden = button.dataset.range !== "custom"; if (button.dataset.range !== "custom") renderSales(button.dataset.range); }));
+document.querySelectorAll(".report-range").forEach(button => button.addEventListener("click", () => {
+  const group = button.parentElement;
+  group.querySelector(".report-range.active")?.classList.remove("active");
+  button.classList.add("active");
+  if (group.id === "my-sales-range-tabs") { renderMySales(button.dataset.range); return; }
+  document.querySelector("#custom-range").hidden = button.dataset.range !== "custom";
+  if (button.dataset.range !== "custom") renderSales(button.dataset.range);
+}));
 document.querySelector("#apply-custom-report").addEventListener("click", () => {
   const fromDate = document.querySelector("#report-from").value;
   const toDate = document.querySelector("#report-to").value;
