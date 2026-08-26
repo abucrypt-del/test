@@ -66,6 +66,7 @@ let cabins = JSON.parse(localStorage.getItem("alyazi-cabins-v1") || "null") || A
   orderMode: "Dine In",
   createdAt: new Date().toISOString()
 }));
+cabins = cabins.map(cabin => ({ ...cabin, order: new Map(cabin.order || []) }));
 
 function saveCabins() {
   const cabinData = cabins.map(cabin => ({
@@ -79,9 +80,17 @@ function getCabinData(cabinId) {
   return cabins.find(c => c.id === cabinId);
 }
 
+function syncCurrentCabinOrder() {
+  const cabin = getCabinData(currentCabinId);
+  if (!cabin) return;
+  cabin.order = new Map(order);
+  saveCabins();
+}
+
 function switchCabin(cabinId) {
   const currentCabin = getCabinData(currentCabinId);
   if (currentCabin) {
+    currentCabin.order = new Map(order);
     currentCabin.guestName = currentOrderGuestName;
     currentCabin.guestPhone = currentOrderGuestPhone;
     currentCabin.billState = billState;
@@ -115,6 +124,26 @@ function switchCabin(cabinId) {
   renderCabinTabs();
 }
 
+function restoreActiveCabin() {
+  const cabin = getCabinData(currentCabinId);
+  if (!cabin) return;
+  order.clear();
+  cabin.order.forEach((value, key) => order.set(key, value));
+  currentOrderGuestName = cabin.guestName;
+  currentOrderGuestPhone = cabin.guestPhone;
+  const persistedKotState = localStorage.getItem("alyazi-kot-status");
+  kotState = persistedKotState === "accepted" || persistedKotState === "ready" || persistedKotState === "sent" ? persistedKotState : cabin.kotState;
+  billState = cabin.billState;
+  orderMode = cabin.orderMode;
+  if (kotState === "accepted") {
+    const acceptedAt = Number(localStorage.getItem("alyazi-kot-accepted-at") || Date.now());
+    kitchenPrepStartedAt = acceptedAt;
+    startKitchenPrepTimer();
+  }
+  document.querySelector("#guest-name").value = currentOrderGuestName;
+  document.querySelector("#guest-phone").value = currentOrderGuestPhone;
+}
+
 function renderCabinTabs() {
   const container = document.querySelector(".cabin-tabs");
   if (!container) return;
@@ -138,6 +167,7 @@ function closeCabin(cabinId) {
     return;
   }
   cabin.order.clear();
+  order.clear();
   cabin.guestName = "";
   cabin.guestPhone = "";
   cabin.billState = "not-printed";
@@ -383,6 +413,7 @@ function addItem(id) {
   const item = menuItems.find(menuItem => menuItem.id === Number(id));
   const current = order.get(item.id);
   order.set(item.id, { ...item, quantity: current ? current.quantity + 1 : 1 });
+  syncCurrentCabinOrder();
   renderOrder();
   showToast(`${item.name} added to ticket`);
 }
@@ -620,6 +651,7 @@ orderList.addEventListener("click", event => {
   const item = order.get(id);
   if (event.target.dataset.remove || (event.target.dataset.decrease && item.quantity === 1)) order.delete(id);
   else order.set(id, { ...item, quantity: item.quantity + (event.target.dataset.increase ? 1 : -1) });
+  syncCurrentCabinOrder();
   renderOrder();
 });
 document.querySelectorAll(".category-tab").forEach(tab => tab.addEventListener("click", () => {
@@ -894,6 +926,7 @@ document.querySelector("#reset-requests-list").addEventListener("click", event =
 renderMenu();
 renderCategoryTabs();
 renderCategorySelect();
+restoreActiveCabin();
 renderOrder();
 renderCabinTabs();
 renderLoginUsers();
