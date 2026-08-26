@@ -53,6 +53,9 @@ let upiAccounts = JSON.parse(localStorage.getItem("alyazi-upi-accounts-v1") || "
 let selectedUpiId = upiAccounts[0]?.id || null;
 let printSettings = JSON.parse(localStorage.getItem("alyazi-print-settings-v1") || "null") || { header: "AL YAZI MANDI RESTRAUNT", phone: "", whatsapp: "", address: "", footer: "Thank you for dining with us", showLogo: true, showTax: true, showOrderType: true };
 printSettings.whatsapp = printSettings.whatsapp || "";
+printSettings.headerAlign = printSettings.headerAlign || "center";
+printSettings.infoAlign = printSettings.infoAlign || "center";
+printSettings.footerAlign = printSettings.footerAlign || "center";
 let users = JSON.parse(localStorage.getItem("alyazi-users-v1") || "null") || [{ id: 1, name: "abu", email: "owner@alyazi.com", phone: "", role: "Super Admin", password: "admin123" }];
 users = users.map(user => ({ ...user, password: user.password || "admin123" }));
 // Restore session or redirect to login
@@ -681,6 +684,55 @@ function loadPrintSettings() {
   document.querySelector("#print-show-order-type").checked = printSettings.showOrderType;
 }
 
+function buildReceiptPreviewHtml(headerAlign, infoAlign, footerAlign) {
+  return `<div style="text-align:${headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}<h1>${printSettings.header || "AL YAZI MANDI RESTRAUNT"}</h1>${printSettings.address ? `<p>${printSettings.address}</p>` : ""}${printSettings.phone ? `<p>Ph: ${printSettings.phone}</p>` : ""}</div><hr><div style="text-align:${infoAlign}"><h2>RECEIPT</h2><p>Guest: Sample Guest | 9999999999</p><p>Order type: Dine In</p><p>Cabin 1</p><p>Order #1001</p><p>${new Date().toLocaleString()}</p></div><hr><div class="print-line"><span>1 x Mutton Yemeni Mandi</span><strong>₹395.00</strong></div><div class="print-line"><span>1 x Chicken Alfaham Mandi</span><strong>₹270.00</strong></div><hr><div class="print-line"><span>Subtotal</span><strong>₹665.00</strong></div><div class="print-line print-total"><span>Total</span><strong>₹719.86</strong></div>${printSettings.footer ? `<hr><div style="text-align:${footerAlign}"><p>${printSettings.footer}</p></div>` : ""}`;
+}
+
+function getReceiptLayoutDraft() {
+  const draft = {};
+  document.querySelectorAll("#receipt-layout-card .align-group").forEach(group => {
+    const activeBtn = group.querySelector(".align-buttons button.active");
+    draft[group.dataset.zone] = activeBtn ? activeBtn.dataset.align : "center";
+  });
+  return draft;
+}
+
+function renderReceiptLayoutPreview() {
+  const draft = getReceiptLayoutDraft();
+  document.querySelector("#receipt-layout-preview").innerHTML =
+    buildReceiptPreviewHtml(draft.headerAlign, draft.infoAlign, draft.footerAlign);
+}
+
+function renderReceiptLayoutEditor() {
+  const card = document.querySelector("#receipt-layout-card");
+  if (!card) return;
+  card.hidden = currentUser.role !== "Super Admin";
+  if (card.hidden) return;
+  document.querySelectorAll("#receipt-layout-card .align-group").forEach(group => {
+    group.querySelectorAll(".align-buttons button").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.align === printSettings[group.dataset.zone]);
+    });
+  });
+  renderReceiptLayoutPreview();
+}
+
+document.querySelectorAll("#receipt-layout-card .align-buttons button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    renderReceiptLayoutPreview();
+  });
+});
+
+document.querySelector("#save-receipt-layout").addEventListener("click", () => {
+  const draft = getReceiptLayoutDraft();
+  printSettings.headerAlign = draft.headerAlign;
+  printSettings.infoAlign = draft.infoAlign;
+  printSettings.footerAlign = draft.footerAlign;
+  localStorage.setItem("alyazi-print-settings-v1", JSON.stringify(printSettings));
+  showToast("Receipt layout saved");
+});
+
 function renderLoginUsers() {
   document.querySelector("#login-user").innerHTML = users.filter(user => !user.locked).map(user => `<option value="${user.id}">${user.name} · ${user.role}</option>`).join("");
 }
@@ -882,7 +934,7 @@ function renderPrintSheet(type, isReprint = false, itemsOverride = null) {
     }
     orderNumberLine = `<p>Order #${activeCabin.orderNumber}</p>`;
   }
-  const html = `${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}<h1>${safe(printSettings.header)}</h1>${printSettings.address ? `<p>${safe(printSettings.address)}</p>` : ""}${printSettings.phone ? `<p>Ph: ${safe(printSettings.phone)}</p>` : ""}${printSettings.whatsapp ? `<p>WhatsApp: ${safe(printSettings.whatsapp)}</p>` : ""}<hr><h2>${type === "KOT" ? (itemsOverride ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT") : "RECEIPT"}</h2>${receiptType ? `<p style="text-align:center; font-weight:bold;">${receiptType}</p>` : ""}${guestInfo}${printSettings.showOrderType ? `<p>Order type: ${safe(orderMode)}</p>` : ""}${locationLine}${orderNumberLine}<p>${new Date().toLocaleString()}</p><hr>${items.map(item => `<div class="print-line"><span>${item.quantity} x ${safe(item.name)}</span><strong>${money(item.price * item.quantity)}</strong></div>`).join("")}${type === "KOT" ? "" : `<hr><div class="print-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>${discountAmount > 0 ? `<div class="print-line"><span>Discount</span><strong>-${money(discountAmount)}</strong></div>` : ""}${printSettings.showTax ? `<div class="print-line"><span>Tax (8.25%)</span><strong>${money(tax)}</strong></div>` : ""}<div class="print-line print-total"><span>Total</span><strong>${money(total)}</strong></div>`}${printSettings.footer ? `<hr><p>${safe(printSettings.footer)}</p>` : ""}`;
+  const html = `<div style="text-align:${printSettings.headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}<h1>${safe(printSettings.header)}</h1>${printSettings.address ? `<p>${safe(printSettings.address)}</p>` : ""}${printSettings.phone ? `<p>Ph: ${safe(printSettings.phone)}</p>` : ""}${printSettings.whatsapp ? `<p>WhatsApp: ${safe(printSettings.whatsapp)}</p>` : ""}</div><hr><div style="text-align:${printSettings.infoAlign}"><h2>${type === "KOT" ? (itemsOverride ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT") : "RECEIPT"}</h2>${receiptType ? `<p style="font-weight:bold;">${receiptType}</p>` : ""}${guestInfo}${printSettings.showOrderType ? `<p>Order type: ${safe(orderMode)}</p>` : ""}${locationLine}${orderNumberLine}<p>${new Date().toLocaleString()}</p></div><hr>${items.map(item => `<div class="print-line"><span>${item.quantity} x ${safe(item.name)}</span><strong>${money(item.price * item.quantity)}</strong></div>`).join("")}${type === "KOT" ? "" : `<hr><div class="print-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>${discountAmount > 0 ? `<div class="print-line"><span>Discount</span><strong>-${money(discountAmount)}</strong></div>` : ""}${printSettings.showTax ? `<div class="print-line"><span>Tax (8.25%)</span><strong>${money(tax)}</strong></div>` : ""}<div class="print-line print-total"><span>Total</span><strong>${money(total)}</strong></div>`}${printSettings.footer ? `<hr><div style="text-align:${printSettings.footerAlign}"><p>${safe(printSettings.footer)}</p></div>` : ""}`;
   document.querySelector("#print-sheet").innerHTML = html;
   if (type === "bill" && !isReprint) {
     printedBills.push({ html: html.replace("--- ORIGINAL ---", "--- COPY ---"), createdAt: new Date().toISOString(), guest: currentOrderGuestName, phone: currentOrderGuestPhone, total, originalHtml: html });
@@ -1329,7 +1381,7 @@ function applySettingsAccessForRole() {
 document.querySelector("#settings-button").addEventListener("click", () => {
   if (!applySettingsAccessForRole()) { showToast("You don't have access to any settings pages"); return; }
   settingsModal.hidden = false;
-  renderMenuTable(); renderUsers(); renderUpiAccounts(); loadPrintSettings(); updateSession(); renderRolePermissionsTable();
+  renderMenuTable(); renderUsers(); renderUpiAccounts(); loadPrintSettings(); updateSession(); renderRolePermissionsTable(); renderReceiptLayoutEditor();
 });
 document.querySelector("#close-settings").addEventListener("click", () => { settingsModal.hidden = true; });
 settingsModal.addEventListener("click", event => { if (event.target === settingsModal) settingsModal.hidden = true; });

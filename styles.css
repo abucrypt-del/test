@@ -301,6 +301,22 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 .print-form-grid { grid-template-columns: 1.3fr 1fr 1fr; }
 .print-checks { margin: 14px 0; display: flex; gap: 16px; color: var(--muted); font-size: 10px; }
 .print-checks input { accent-color: var(--sage-dark); }
+.layout-editor { display: grid; grid-template-columns: 1fr auto; gap: 24px; margin-top: 14px; align-items: start; }
+.layout-editor-controls { display: flex; flex-direction: column; gap: 14px; }
+.align-group label { display: block; margin-bottom: 6px; font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.align-buttons { display: inline-flex; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+.align-buttons button { padding: 7px 16px; background: white; color: var(--muted); font-size: 12px; font-weight: 600; border-right: 1px solid var(--line); }
+.align-buttons button:last-child { border-right: 0; }
+.align-buttons button.active { background: var(--sage-dark); color: white; }
+.layout-editor-controls .save-button { align-self: flex-start; margin-top: 4px; }
+.layout-editor-preview { display: flex; justify-content: center; }
+.receipt-preview { width: 210px; padding: 12px 10px; background: white; border: 1px solid var(--line); border-radius: 3px; box-shadow: 0 8px 20px rgba(45,41,36,.1); font: 10px/1.4 monospace; color: #111; }
+.receipt-preview img { width: 100%; max-height: 34px; object-fit: contain; filter: invert(1); mix-blend-mode: multiply; }
+.receipt-preview h1, .receipt-preview h2 { margin: 4px 0; font: 700 12px/1.2 monospace; }
+.receipt-preview p { margin: 3px 0; }
+.receipt-preview hr { border: 0; border-top: 1px dashed #999; margin: 6px 0; }
+.receipt-preview .print-line { display: flex; justify-content: space-between; gap: 8px; margin: 3px 0; }
+.receipt-preview .print-total { margin-top: 4px; font-weight: 700; }
 #print-sheet { display: none; }
 .upi-payment { margin: 0 0 20px; padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 4px; background: #f5f7ef; }
 .upi-payment[hidden] { display: none; }
@@ -445,11 +461,11 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
   body.print-ticket .modal-backdrop { display: none !important; }
   body { margin: 0; }
   body.print-ticket #print-sheet {
-    display: block; width: 76mm; padding: 3mm; color: #111; background: white; font: 11px/1.4 monospace;
+    display: block; width: 76mm; padding: 3mm; color: #111; background: white; font: 11px/1.4 monospace; text-align: center;
   }
   #print-sheet img { width: 100%; max-height: 28mm; object-fit: contain; filter: invert(1); mix-blend-mode: multiply; }
-  #print-sheet h1, #print-sheet h2 { margin: 2mm 0; text-align: center; font: 700 15px/1.2 monospace; }
-  #print-sheet p { margin: 1.5mm 0; text-align: center; }
+  #print-sheet h1, #print-sheet h2 { margin: 2mm 0; font: 700 15px/1.2 monospace; }
+  #print-sheet p { margin: 1.5mm 0; }
   #print-sheet hr { border: 0; border-top: 1px dashed #555; margin: 2mm 0; }
   #print-sheet .print-line { display: flex; justify-content: space-between; gap: 5mm; margin: 1.5mm 0; }
   #print-sheet .print-total { margin-top: 2mm; font-weight: 700; font-size: 13px; }
