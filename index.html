@@ -33,6 +33,48 @@
       justify-content: center;
       padding: 20px;
     }
+    .login-banner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      max-width: 100%;
+      margin: 0 auto 24px;
+      padding: 20px clamp(24px, 8vw, 44px);
+      border-radius: 14px;
+      background: linear-gradient(160deg, #10160f, #1c2620 55%, #233026);
+      border: 1px solid rgba(199,149,69,.35);
+      box-shadow: 0 0 0 1px rgba(199,149,69,.12), 0 0 30px rgba(199,149,69,.28), 0 18px 46px rgba(0,0,0,.35);
+      animation: banner-glow 3.2s ease-in-out infinite, rise .35s ease;
+    }
+    .login-logo-wrap {
+      position: relative;
+      width: min(230px, 60vw);
+    }
+    .login-logo-glow {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: auto;
+      mix-blend-mode: screen;
+      filter: blur(6px) brightness(1.15) sepia(.6) saturate(2) hue-rotate(-6deg);
+      animation: logo-glow-pulse 3.2s ease-in-out infinite;
+    }
+    .login-banner-logo {
+      position: relative;
+      display: block;
+      width: 100%;
+      height: auto;
+      mix-blend-mode: screen;
+    }
+    @keyframes banner-glow {
+      0%, 100% { box-shadow: 0 0 0 1px rgba(199,149,69,.12), 0 0 30px rgba(199,149,69,.28), 0 18px 46px rgba(0,0,0,.35); }
+      50% { box-shadow: 0 0 0 1px rgba(199,149,69,.24), 0 0 52px rgba(199,149,69,.52), 0 18px 46px rgba(0,0,0,.35); }
+    }
+    @keyframes logo-glow-pulse {
+      0%, 100% { opacity: .2; }
+      50% { opacity: .4; }
+    }
     .login-card {
       width: min(420px, 100%);
       background: var(--panel);
@@ -42,18 +84,8 @@
       padding: 40px 36px 36px;
       animation: rise .35s ease;
     }
-    .login-logo {
-      display: block;
-      width: 220px;
-      height: 68px;
-      object-fit: contain;
-      object-position: left center;
-      filter: invert(1);
-      mix-blend-mode: multiply;
-      margin-bottom: 28px;
-    }
-    .login-heading { margin-bottom: 6px; font: 600 28px/1.1 "Playfair Display", serif; color: var(--ink); }
-    .login-sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+    .login-heading { margin-bottom: 6px; font: 600 28px/1.1 "Playfair Display", serif; color: var(--ink); text-align: center; }
+    .login-sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; text-align: center; }
     .login-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
     .login-field label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
     .login-field select,
@@ -96,8 +128,13 @@
 </head>
 <body>
   <div class="login-card">
-    <img class="login-logo" src="al-yazi-mandi-logo.png" alt="AL YAZI MANDI RESTRAUNT" />
-    <h1 class="login-heading">Welcome back</h1>
+    <div class="login-banner">
+      <div class="login-logo-wrap">
+        <img class="login-logo-glow" src="al-yazi-mandi-logo.png" alt="" aria-hidden="true" />
+        <img class="login-banner-logo" src="al-yazi-mandi-logo.png" alt="AL YAZI MANDI RESTRAUNT" />
+      </div>
+    </div>
+    <h1 class="login-heading" hidden></h1>
     <p class="login-sub">Sign in to access the restaurant workspace.</p>
     <form id="login-form">
       <div class="login-field">
@@ -163,6 +200,11 @@
         return;
       }
 
+      if (user.locked) {
+        errorEl.textContent = "This account has been locked. Contact your Super Admin.";
+        return;
+      }
+
       let passwordOk = (user.password || "admin123") === password;
 
       // The Super Admin password can be reset remotely via email, so when
@@ -204,6 +246,7 @@
       showForgotPasswordRow.hidden = true;
       showSigninRow.hidden = false;
       heading.textContent = "Forgot password";
+      heading.hidden = false;
       sub.textContent = "Enter your username and we'll route the reset.";
       document.getElementById("fp-username").value = "";
       document.getElementById("fp-error").textContent = "";
@@ -216,7 +259,7 @@
       loginForm.hidden = false;
       showForgotPasswordRow.hidden = false;
       showSigninRow.hidden = true;
-      heading.textContent = "Welcome back";
+      heading.hidden = true;
       sub.textContent = "Sign in to access the restaurant workspace.";
     }
 

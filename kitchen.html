@@ -17,6 +17,8 @@
     .kot-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(285px,1fr)); gap:16px; } .kot-card { overflow:hidden; border:1px solid var(--line); border-radius:6px; background:var(--panel); } .kot-card.alerting { animation:kitchen-alert-blink .65s ease-in-out infinite; border-color:#d38156; box-shadow:0 0 0 2px rgba(211,129,86,.35), inset 0 0 0 1px rgba(255,255,255,.08); }
     .kitchen-alerting .live { animation:kitchen-live-pulse .75s ease-in-out infinite; }
     .kot-card-header { padding:17px 18px; display:flex; justify-content:space-between; border-bottom:1px solid var(--line); } .kot-card-header strong { font:700 21px "Playfair Display",serif; } .kot-card-header span { color:var(--gold); font-size:12px; } .kot-items { padding:8px 18px 16px; } .kot-item { padding:12px 0; display:flex; justify-content:space-between; border-bottom:1px solid var(--line); } .kot-item:last-child { border:0; } .kot-item span { color:var(--muted); font-size:12px; } .kot-footer { padding:0 18px 16px; color:var(--muted); font-size:11px; } .ready { width:100%; height:40px; border:0; border-radius:4px; background:var(--coral); color:white; font:700 12px "DM Sans",sans-serif; cursor:pointer; }
+    .paid-badge { display:inline-block; padding:2px 7px; margin-left:6px; border-radius:3px; background:#2f6b3f; color:#d9f2df; font:700 10px "DM Sans",sans-serif; vertical-align:middle; }
+    .additional-badge { display:inline-block; padding:2px 7px; margin-left:6px; border-radius:3px; background:#8a5a20; color:#fbe6c8; font:700 10px "DM Sans",sans-serif; vertical-align:middle; }
     @keyframes kitchen-alert-blink { 0%,100% { background:rgba(209,137,67,.12); transform:scale(1); } 50% { background:rgba(209,137,67,.22); transform:scale(1.005); } }
     @keyframes kitchen-live-pulse { 0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(167,208,115,.35); } 50% { opacity:1; box-shadow:0 0 0 8px rgba(167,208,115,0); } }
     @media (max-width:600px) { header { padding:0 20px; } main { padding:28px 20px; } .page-heading { display:block; } .clock { margin-top:8px; } }
@@ -98,7 +100,7 @@
       const kots = getKots();
       // A cabin's ticket disappears from the kitchen screen once marked
       // ready — that's the kitchen's job done; billing takes it from there.
-      const active = Object.values(kots).filter(kot => kot.status === "sent" || kot.status === "accepted");
+      const active = Object.values(kots).filter(kot => (kot.status === "sent" || kot.status === "accepted") && kot.items && kot.items.length > 0);
       const list = document.querySelector("#kot-list");
       const body = document.body;
 
@@ -116,7 +118,7 @@
       list.innerHTML = `<div class="kot-grid">${active.map(kot => {
         const isAlerting = Date.now() - new Date(kot.createdAt).getTime() < KITCHEN_ALERT_DURATION_MS;
         const isAccepted = kot.status === "accepted";
-        return `<article class="kot-card ${isAlerting ? "alerting" : ""}"><div class="kot-card-header"><strong>${kot.cabinName || "Table 14"}</strong><span>${kot.mode} · KOT</span></div><div class="kot-items">${kot.items.map(item => `<div class="kot-item"><strong>${item.quantity} × ${item.name}</strong><span>${money(item.price * item.quantity)}</span></div>`).join("")}</div><div class="kot-footer">Order received ${formatKotTime(kot.createdAt)}<button class="ready" onclick="${isAccepted ? `complete(${kot.cabinId})` : `acceptOrder(${kot.cabinId})`}">${isAccepted ? "Mark order ready" : "Accept order"}</button></div></article>`;
+        return `<article class="kot-card ${isAlerting ? "alerting" : ""}"><div class="kot-card-header"><strong>${kot.cabinName || "Table 14"}${kot.paid ? ` <span class="paid-badge">PAID</span>` : ""}${kot.isAdditional ? ` <span class="additional-badge">ADDITIONAL</span>` : ""}</strong><span>${kot.mode} · KOT</span></div><div class="kot-items">${kot.items.map(item => `<div class="kot-item"><strong>${item.quantity} × ${item.name}</strong><span>${money(item.price * item.quantity)}</span></div>`).join("")}</div><div class="kot-footer">Order received ${formatKotTime(kot.createdAt)}<button class="ready" onclick="${isAccepted ? `complete(${kot.cabinId})` : `acceptOrder(${kot.cabinId})`}">${isAccepted ? "Mark order ready" : "Accept order"}</button></div></article>`;
       }).join("")}</div>`;
 
       if (isAnyAlerting) {
