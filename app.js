@@ -1,5 +1,9 @@
-let menuCategories = JSON.parse(localStorage.getItem("alyazi-categories-v1") || "null") || ["Mandi", "Chicken Mandi", "BBQ", "Extras"];
-let menuItems = JSON.parse(localStorage.getItem("alyazi-menu-en-v6") || "null") || [
+function parseNonEmpty(raw) {
+  const parsed = JSON.parse(raw || "null");
+  return Array.isArray(parsed) && parsed.length === 0 ? null : parsed;
+}
+let menuCategories = parseNonEmpty(localStorage.getItem("alyazi-categories-v1")) || ["Mandi", "Chicken Mandi", "BBQ", "Extras"];
+let menuItems = parseNonEmpty(localStorage.getItem("alyazi-menu-en-v6")) || [
   { id: 1, name: "Mutton Yemeni Mandi - 1 Person", description: "Slow-cooked mutton, fragrant basmati rice", price: 395, category: "Mandi", badge: "Signature", image: "mutton 02.jpeg" },
   { id: 2, name: "Mutton Yemeni Mandi - 2 Person", description: "Slow-cooked mutton, fragrant basmati rice", price: 790, category: "Mandi", image: "mutton 02.jpeg" },
   { id: 3, name: "Mutton Yemeni Mandi - 3 Person", description: "Slow-cooked mutton, fragrant basmati rice", price: 1299, category: "Mandi", image: "mutton 02.jpeg" },

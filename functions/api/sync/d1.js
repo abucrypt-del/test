@@ -146,13 +146,18 @@ export async function onRequestGet({ env }) {
     });
   }
 
+  // An empty array is a real JS value, not "no data" — sending "[]" would
+  // make the client think D1 has an authoritative (empty) answer and skip
+  // its own seed defaults. Send null instead when a table has nothing yet.
+  const orNull = list => (list.length ? JSON.stringify(list) : null);
+
   return json({
     ok: true,
     data: {
-      "alyazi-menu-en-v6": JSON.stringify(menuItems),
-      "alyazi-categories-v1": JSON.stringify(categories),
-      "alyazi-bookings-v1": JSON.stringify(bookings),
-      "alyazi-sales-v1": JSON.stringify(sales),
+      "alyazi-menu-en-v6": orNull(menuItems),
+      "alyazi-categories-v1": orNull(categories),
+      "alyazi-bookings-v1": orNull(bookings),
+      "alyazi-sales-v1": orNull(sales),
     },
   });
 }
