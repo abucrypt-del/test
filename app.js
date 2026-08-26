@@ -57,7 +57,14 @@ printSettings.headerAlign = printSettings.headerAlign || "center";
 printSettings.paperSize = printSettings.paperSize || "80mm";
 printSettings.footerAlign = printSettings.footerAlign || "center";
 let users = JSON.parse(localStorage.getItem("alyazi-users-v1") || "null") || [{ id: 1, name: "abu", email: "owner@alyazi.com", phone: "", role: "Super Admin", password: "admin123" }];
-users = users.map(user => ({ ...user, password: user.password || "admin123" }));
+users = users.map(user => ({
+  ...user,
+  password: user.password || "admin123",
+  // One-time migration for browsers that cached the users list before the
+  // Super Admin was renamed to "abu".
+  name: user.id === 1 && user.email === "owner@alyazi.com" ? "abu" : user.name,
+}));
+localStorage.setItem("alyazi-users-v1", JSON.stringify(users));
 // Restore session or redirect to login
 let currentUser = (function() {
   const stored = sessionStorage.getItem("alyazi-current-user");

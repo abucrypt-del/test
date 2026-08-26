@@ -159,6 +159,18 @@
       { id: 1, name: "abu", email: "owner@alyazi.com", phone: "", role: "Super Admin", password: "admin123" }
     ];
 
+    // One-time migration: browsers that cached the users list before the
+    // Super Admin was renamed to "abu" would otherwise be stuck matching
+    // against the old name forever, since the fallback above only applies
+    // when nothing is cached yet.
+    (function migrateSuperAdminName() {
+      const seedOwner = users.find(u => u.id === 1 && u.email === "owner@alyazi.com");
+      if (seedOwner && seedOwner.name !== "abu") {
+        seedOwner.name = "abu";
+        localStorage.setItem("alyazi-users-v1", JSON.stringify(users));
+      }
+    })();
+
     const heading = document.querySelector(".login-heading");
     const sub = document.querySelector(".login-sub");
     const loginForm = document.getElementById("login-form");
