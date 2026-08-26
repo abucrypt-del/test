@@ -1471,7 +1471,7 @@ document.querySelector("#upi-accounts-list").addEventListener("click", event => 
 window.addEventListener("storage", event => {
   if (event.key === "alyazi-kots-v1") syncKotStatusFromStorage();
 });
-document.querySelectorAll(".test-button").forEach(button => button.addEventListener("click", () => showToast(`${button.dataset.printer === "network" ? "Network" : "Wired"} test print sent`)));
+document.querySelectorAll(".test-button[data-printer]").forEach(button => button.addEventListener("click", () => showToast(`${button.dataset.printer === "network" ? "Network" : "Wired"} test print sent`)));
 const addMenuForm = document.querySelector("#add-menu-form");
 if (addMenuForm) {
   addMenuForm.addEventListener("submit", event => {
