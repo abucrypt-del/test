@@ -216,6 +216,31 @@ function saveUsers() {
   renderUsers();
 }
 
+function getResetRequests() {
+  return JSON.parse(localStorage.getItem("alyazi-password-reset-requests") || "[]");
+}
+
+function saveResetRequests(requests) {
+  localStorage.setItem("alyazi-password-reset-requests", JSON.stringify(requests));
+}
+
+function renderResetRequests() {
+  const button = document.querySelector("#notifications-button");
+  const dot = document.querySelector("#notification-dot");
+  const list = document.querySelector("#reset-requests-list");
+  if (currentUser.role !== "Super Admin") {
+    button.hidden = true;
+    document.querySelector("#notifications-panel").hidden = true;
+    return;
+  }
+  button.hidden = false;
+  const requests = getResetRequests();
+  dot.hidden = requests.length === 0;
+  list.innerHTML = requests.length
+    ? requests.map(req => `<div class="reset-request-row" data-request-id="${req.id}" data-user-id="${req.userId}"><div class="reset-request-info"><strong>${req.userName}</strong><small>${req.role}</small></div><button class="reset-request-action" data-action="start" type="button">Reset password</button></div>`).join("")
+    : `<small>No pending requests.</small>`;
+}
+
 function renderUpiAccounts() {
   const list = document.querySelector("#upi-accounts-list");
   list.innerHTML = upiAccounts.length ? upiAccounts.map(account => `<div class="upi-account-row"><span class="upi-bank-icon">₹</span><div><strong>${account.name}</strong><small>${account.bank} · ${account.upiId}</small></div><label class="switch"><input type="checkbox" data-upi-toggle="${account.id}" ${account.enabled ? "checked" : ""}><span></span></label>${upiAccounts.length > 1 ? `<button class="delete-menu" data-delete-upi="${account.id}" aria-label="Delete ${account.name}">×</button>` : ""}</div>`).join("") : `<div class="upi-empty">No linked UPI accounts yet.</div>`;
@@ -248,6 +273,7 @@ function updateSession() {
   document.querySelector("#account-name").textContent = currentUser.name;
   document.querySelector("#account-role").textContent = currentUser.role;
   sessionStorage.setItem("alyazi-current-user", JSON.stringify(currentUser));
+  renderResetRequests();
 }
 
 function renderSales(range = "day", fromDate = "", toDate = "") {
@@ -812,7 +838,7 @@ document.addEventListener("click", event => {
 const accountMenu = document.querySelector("#account-menu");
 const loginModal = document.querySelector("#login-modal");
 const changePasswordModal = document.querySelector("#change-password-modal");
-document.querySelector("#profile-button").addEventListener("click", () => { accountMenu.hidden = !accountMenu.hidden; });
+document.querySelector("#profile-button").addEventListener("click", () => { accountMenu.hidden = !accountMenu.hidden; document.querySelector("#notifications-panel").hidden = true; });
 document.querySelector("#logout-button").addEventListener("click", () => { accountMenu.hidden = true; sessionStorage.removeItem("alyazi-current-user"); window.location.replace("/"); });
 document.querySelector("#switch-user").addEventListener("click", () => { accountMenu.hidden = true; renderLoginUsers(); loginModal.hidden = false; });
 document.querySelector("#change-password-btn").addEventListener("click", () => { accountMenu.hidden = true; changePasswordModal.hidden = false; document.querySelector("#current-password").value = ""; document.querySelector("#new-password").value = ""; document.querySelector("#confirm-password").value = ""; document.querySelector("#password-change-error").textContent = ""; });
@@ -840,6 +866,29 @@ document.querySelector("#login-form").addEventListener("submit", event => {
   const password = document.querySelector("#login-password").value;
   if (!user || user.password !== password) { document.querySelector("#login-error").textContent = "Incorrect password. Please try again."; return; }
   currentUser = user; sessionStorage.setItem("alyazi-current-user", JSON.stringify(currentUser)); updateSession(); loginModal.hidden = true; document.querySelector("#login-error").textContent = ""; document.querySelector("#login-password").value = ""; showToast(`Welcome, ${user.name}`);
+});
+
+const notificationsPanel = document.querySelector("#notifications-panel");
+document.querySelector("#notifications-button").addEventListener("click", () => {
+  accountMenu.hidden = true;
+  notificationsPanel.hidden = !notificationsPanel.hidden;
+  if (!notificationsPanel.hidden) renderResetRequests();
+});
+document.querySelector("#reset-requests-list").addEventListener("click", event => {
+  const row = event.target.closest(".reset-request-row");
+  if (!row || event.target.dataset.action !== "start") return;
+  const requestId = Number(row.dataset.requestId);
+  const userId = Number(row.dataset.userId);
+  row.innerHTML = `<form class="reset-request-form"><input type="password" class="reset-new-password" placeholder="New password" required minlength="6"><button type="submit" class="save-button">Save</button></form>`;
+  row.querySelector("form").addEventListener("submit", submitEvent => {
+    submitEvent.preventDefault();
+    const newPassword = row.querySelector(".reset-new-password").value;
+    const user = users.find(u => u.id === userId);
+    if (user) { user.password = newPassword; saveUsers(); }
+    saveResetRequests(getResetRequests().filter(r => r.id !== requestId));
+    showToast(`Password reset for ${user ? user.name : "user"}`);
+    renderResetRequests();
+  });
 });
 
 renderMenu();
