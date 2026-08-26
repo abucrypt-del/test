@@ -534,6 +534,7 @@ const MANAGED_SETTINGS_PAGES = [
     ] },
   { key: "receipts", label: "Receipt History", actions: [
       { key: "reprint", label: "Reprint receipts" },
+      { key: "export", label: "Export Excel" },
     ] },
   { key: "bookings", label: "Booking Management", actions: [
       { key: "edit", label: "Edit bookings" },
@@ -1429,6 +1430,15 @@ document.querySelector("#export-sales").addEventListener("click", () => {
   const table = `<table><tr>${rows[0].map(cell => `<th>${cell}</th>`).join("")}</tr>${rows.slice(1).map(row => `<tr>${row.map(cell => `<td>${String(cell).replace(/&/g, "&amp;").replace(/</g, "&lt;")}</td>`).join("")}</tr>`).join("")}</table>`;
   const blob = new Blob([`<html><head><meta charset="UTF-8"></head><body>${table}</body></html>`], { type: "application/vnd.ms-excel" });
   const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `alyazi-sales-${new Date().toISOString().slice(0, 10)}.xls`; link.click(); URL.revokeObjectURL(link.href); showToast("Sales report exported to Excel");
+});
+document.querySelector("#export-receipts").addEventListener("click", () => {
+  if (!hasSettingsActionAccess(currentUser.role, "receipts", "export")) { showToast("You don't have permission to export receipts"); return; }
+  if (!printedBills.length) { showToast("No receipts to export"); return; }
+  const rows = [["Date", "Guest", "Phone", "Total"]];
+  printedBills.forEach((bill, idx) => rows.push([new Date(bill.createdAt).toLocaleString(), bill.guest || `Guest ${idx + 1}`, bill.phone || "", money(bill.total)]));
+  const table = `<table><tr>${rows[0].map(cell => `<th>${cell}</th>`).join("")}</tr>${rows.slice(1).map(row => `<tr>${row.map(cell => `<td>${String(cell).replace(/&/g, "&amp;").replace(/</g, "&lt;")}</td>`).join("")}</tr>`).join("")}</table>`;
+  const blob = new Blob([`<html><head><meta charset="UTF-8"></head><body>${table}</body></html>`], { type: "application/vnd.ms-excel" });
+  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `alyazi-receipts-${new Date().toISOString().slice(0, 10)}.xls`; link.click(); URL.revokeObjectURL(link.href); showToast("Receipt history exported to Excel");
 });
 document.querySelector("#user-form").addEventListener("submit", event => {
   event.preventDefault();
