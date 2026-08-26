@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AL YAZI MANDI | Kitchen Display</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink:#f8f4ea; --muted:#a9b1a3; --paper:#18231e; --panel:#213029; --line:#33463b; --gold:#e0aa56; --coral:#ce6a49; }
+    * { box-sizing:border-box; } body { margin:0; min-width:320px; background:radial-gradient(circle at 85% 10%,#30473a,transparent 30%),var(--paper); color:var(--ink); font-family:"DM Sans",sans-serif; }
+    header { min-height:78px; padding:0 5vw; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); }
+    .brand { display:flex; align-items:center; gap:12px; } .mark { width:39px; height:39px; display:grid; place-items:center; border-radius:50%; background:var(--gold); color:#233129; font:700 14px "Playfair Display",serif; } h1 { margin:0; font:400 24px "Playfair Display",serif; } .eyebrow { margin:0 0 4px; color:var(--gold); font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; } .live { color:#a7d073; font-size:12px; } .live:before { content:""; display:inline-block; width:7px; height:7px; margin-right:8px; border-radius:50%; background:#a7d073; }
+    main { max-width:1180px; margin:0 auto; padding:38px 5vw 70px; } .page-heading { display:flex; justify-content:space-between; align-items:end; margin-bottom:26px; } .page-heading h2 { margin:0; font:700 34px "Playfair Display",serif; } .clock { color:var(--muted); font-size:13px; }
+    .empty { padding:90px 20px; text-align:center; border:1px dashed var(--line); border-radius:7px; color:var(--muted); } .empty strong { display:block; margin-bottom:8px; color:var(--ink); font:700 22px "Playfair Display",serif; }
+    .kot-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(285px,1fr)); gap:16px; } .kot-card { overflow:hidden; border:1px solid var(--line); border-radius:6px; background:var(--panel); } .kot-card.alerting { animation:kitchen-alert-blink .65s ease-in-out infinite; border-color:#d38156; box-shadow:0 0 0 2px rgba(211,129,86,.35), inset 0 0 0 1px rgba(255,255,255,.08); }
+    .kitchen-alerting .live { animation:kitchen-live-pulse .75s ease-in-out infinite; }
+    .kot-card-header { padding:17px 18px; display:flex; justify-content:space-between; border-bottom:1px solid var(--line); } .kot-card-header strong { font:700 21px "Playfair Display",serif; } .kot-card-header span { color:var(--gold); font-size:12px; } .kot-items { padding:8px 18px 16px; } .kot-item { padding:12px 0; display:flex; justify-content:space-between; border-bottom:1px solid var(--line); } .kot-item:last-child { border:0; } .kot-item span { color:var(--muted); font-size:12px; } .kot-footer { padding:0 18px 16px; color:var(--muted); font-size:11px; } .ready { width:100%; height:40px; border:0; border-radius:4px; background:var(--coral); color:white; font:700 12px "DM Sans",sans-serif; cursor:pointer; }
+    @keyframes kitchen-alert-blink { 0%,100% { background:rgba(209,137,67,.12); transform:scale(1); } 50% { background:rgba(209,137,67,.22); transform:scale(1.005); } }
+    @keyframes kitchen-live-pulse { 0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(167,208,115,.35); } 50% { opacity:1; box-shadow:0 0 0 8px rgba(167,208,115,0); } }
+    @media (max-width:600px) { header { padding:0 20px; } main { padding:28px 20px; } .page-heading { display:block; } .clock { margin-top:8px; } }
+  </style>
+</head>
+<body>
+  <header><div class="brand"><span class="mark">AYM</span><div><p class="eyebrow">Kitchen display</p><h1>AL YAZI MANDI RESTRAUNT</h1></div></div><span class="live">Live orders</span></header>
+  <main><div class="page-heading"><h2>Incoming KOTs</h2><span class="clock" id="clock"></span></div><div id="kot-list"></div></main>
+  <script>
+    const money = value => `₹${Number(value).toFixed(2)}`;
+    const formatKotTime = value => new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const KITCHEN_ALERT_DURATION_MS = 15000;
+    let kitchenAlertInterval = null;
+    let kitchenAlertTimeout = null;
+    let audioContext = null;
+
+    function unlockAudio() {
+      if (!audioContext) {
+        const AudioCtor = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtor) audioContext = new AudioCtor();
+      }
+      if (audioContext && audioContext.state === "suspended") {
+        audioContext.resume();
+      }
+    }
+
+    function playKitchenAlertTone() {
+      if (!audioContext) {
+        const AudioCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtor) return;
+        audioContext = new AudioCtor();
+      }
+      if (audioContext.state === "suspended") audioContext.resume();
+
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.type = "square";
+      oscillator.frequency.value = 1800;
+      gainNode.gain.value = 0.0001;
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      const startTime = audioContext.currentTime;
+      gainNode.gain.exponentialRampToValueAtTime(0.18, startTime + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.15);
+      oscillator.start(startTime);
+      oscillator.stop(startTime + 0.15);
+    }
+
+    function stopKitchenAlert() {
+      if (kitchenAlertInterval) {
+        clearInterval(kitchenAlertInterval);
+        kitchenAlertInterval = null;
+      }
+      if (kitchenAlertTimeout) {
+        clearTimeout(kitchenAlertTimeout);
+        kitchenAlertTimeout = null;
+      }
+    }
+
+    function startKitchenAlert() {
+      if (kitchenAlertInterval) return;
+      playKitchenAlertTone();
+      kitchenAlertInterval = setInterval(playKitchenAlertTone, 700);
+      kitchenAlertTimeout = setTimeout(() => {
+        stopKitchenAlert();
+      }, KITCHEN_ALERT_DURATION_MS);
+    }
+
+    function render() {
+      const kot = JSON.parse(localStorage.getItem("alyazi-kot-current") || "null");
+      const list = document.querySelector("#kot-list");
+      const body = document.body;
+      if (!kot || !kot.items?.length) {
+        list.innerHTML = '<div class="empty"><strong>No active kitchen orders</strong>New KOTs will appear here automatically.</div>';
+        body.classList.remove("kitchen-alerting");
+        stopKitchenAlert();
+        return;
+      }
+
+      const printedAt = kot.printedAt || kot.createdAt;
+      const sentAt = kot.sentAt || kot.createdAt;
+      const isAlerting = Date.now() - new Date(kot.createdAt).getTime() < KITCHEN_ALERT_DURATION_MS;
+      body.classList.toggle("kitchen-alerting", isAlerting);
+      const currentStatus = localStorage.getItem("alyazi-kot-status");
+      const isAccepted = currentStatus === "accepted";
+      list.innerHTML = `<div class="kot-grid"><article class="kot-card ${isAlerting ? "alerting" : ""}"><div class="kot-card-header"><strong>${kot.cabin || "Table 14"}</strong><span>${kot.mode} · KOT</span></div><div class="kot-items">${kot.items.map(item => `<div class="kot-item"><strong>${item.quantity} × ${item.name}</strong><span>${money(item.price * item.quantity)}</span></div>`).join("")}</div><div class="kot-footer">KOT printed ${formatKotTime(printedAt)} · Sent ${formatKotTime(sentAt)}<br>Order received ${formatKotTime(kot.createdAt)}<button class="ready" onclick="${isAccepted ? "complete()" : "acceptOrder()"}">${isAccepted ? "Mark order ready" : "Accept order"}</button></div></article></div>`;
+
+      if (isAlerting) {
+        startKitchenAlert();
+      } else {
+        stopKitchenAlert();
+      }
+    }
+
+    function acceptOrder() {
+      const kot = JSON.parse(localStorage.getItem("alyazi-kot-current") || "null");
+      if (!kot || !kot.items?.length) return;
+      localStorage.setItem("alyazi-kot-status", "accepted");
+      localStorage.setItem("alyazi-kot-accepted-at", String(Date.now()));
+      localStorage.setItem("alyazi-kot-state-message", JSON.stringify({ timestamp: Date.now(), type: "accepted" }));
+      render();
+    }
+
+    function complete() {
+      const kot = JSON.parse(localStorage.getItem("alyazi-kot-current") || "null");
+      if (!kot || !kot.items?.length) return;
+      localStorage.setItem("alyazi-kot-status", "ready");
+      localStorage.setItem("alyazi-kot-ready-notification", JSON.stringify({ timestamp: Date.now(), type: "ready" }));
+      localStorage.removeItem("alyazi-kot-accepted-at");
+      localStorage.removeItem("alyazi-kot-current");
+      render();
+    }
+
+    window.addEventListener("storage", event => {
+      if (event.key === "alyazi-kot-current" || event.key === "alyazi-kot-status") render();
+    });
+
+    document.addEventListener("pointerdown", unlockAudio, { once: true });
+    document.addEventListener("keydown", unlockAudio, { once: true });
+    document.querySelector("#clock").textContent = new Date().toLocaleString([], { weekday:"long", hour:"2-digit", minute:"2-digit" });
+    render();
+    setInterval(render, 3000);
+  </script>
+</body>
+</html>

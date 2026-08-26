@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f5efe5" />
+  <title>AL YAZI MANDI RESTRAUNT | Restaurant POS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Pirata+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Auth guard: redirect to login page if not authenticated
+    (function() {
+      const user = sessionStorage.getItem("alyazi-current-user");
+      if (!user) { window.location.replace("/"); }
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#menu" aria-label="AL YAZI MANDI RESTRAUNT home">
+        <img class="brand-logo" src="al-yazi-mandi-logo.png" alt="Al Yazi Mandi Restraunt" />
+      </a>
+      <div class="service-status"><span class="status-dot"></span><span>Service is live</span><span class="status-divider"></span><span>Friday, Oct 18</span></div>
+      <div class="topbar-actions">
+        <button class="icon-button" aria-label="Notifications">◌<span class="notification-dot"></span></button>
+        <button class="settings-button" id="settings-button" aria-label="Open settings">⚙ <span>Settings</span></button>
+        <button class="staff-avatar" id="profile-button" aria-label="Open account menu">AM</button>
+        <div class="account-menu" id="account-menu" hidden><strong id="account-name">Restaurant Owner</strong><small id="account-role">Super Admin</small><button id="change-password-btn">Change password</button><button id="switch-user">Log in as another user</button><button id="logout-button">Log out</button></div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <div class="cabin-section">
+        <div class="cabin-header"><h3>🏠 Dine In Cabins</h3><button id="book-cabin-btn" class="book-cabin-btn" title="Book a cabin in advance">📅 Book</button></div>
+        <div class="cabin-tabs"></div>
+      </div>
+      <section class="menu-panel" id="menu">
+        <div class="welcome-row">
+          <div>
+            <p class="eyebrow">Dinner service <span>•</span> <span id="current-cabin-label">Cabin 1</span></p>
+            <h1>What are we serving?</h1>
+            <p class="subtitle">Build a ticket for the next table.</p>
+          </div>
+          <div class="header-actions"><input type="text" id="menu-search" class="menu-search" placeholder="Search menu..." aria-label="Search menu"><button class="voice-menu-button" id="voice-menu-button" title="Hold to add item" aria-label="Hold to add item by voice"><span class="voice-icon" aria-hidden="true">🎤</span></button></div>
+        </div>
+        <nav class="category-tabs" aria-label="Menu categories">
+          <button class="category-tab active" data-category="All">All items <span>20</span></button>
+          <button class="category-tab" data-category="Mandi">Mandi <span>5</span></button>
+          <button class="category-tab" data-category="Chicken Mandi">Chicken Mandi <span>8</span></button>
+          <button class="category-tab" data-category="BBQ">BBQ <span>3</span></button>
+          <button class="category-tab" data-category="Extras">Extras <span>4</span></button>
+        </nav>
+        <div class="menu-grid" id="menu-grid"></div>
+      </section>
+
+      <aside class="ticket-panel" aria-label="Current order">
+        <div class="ticket-header">
+          <div><p class="eyebrow">Current ticket</p><h2><span id="cabin-billing-name">Cabin 1</span> <span>·</span> <span id="cabin-guest-count">0</span> guests</h2></div>
+          <button class="more-button" aria-label="More ticket options">•••</button>
+        </div>
+        <div class="guest-details">
+          <input id="guest-name" placeholder="Guest name (optional)" maxlength="50">
+          <input id="guest-phone" placeholder="Phone number (optional)" maxlength="20">
+        </div>
+        <div class="workflow-banner" id="workflow-banner" hidden></div>
+        <div class="order-modes" aria-label="Order type">
+          <button class="order-mode active" data-mode="Dine In">Dine In</button>
+          <button class="order-mode" data-mode="Take Away">Take Away</button>
+          <button class="order-mode" data-mode="KOT">KOT</button>
+        </div>
+        <div class="pending-orders" id="pending-orders" hidden>
+          <div class="pending-orders-header"><strong>Pending Take Away Orders</strong></div>
+          <div id="pending-orders-list" class="pending-orders-list"></div>
+        </div>
+        <div class="order-list" id="order-list">
+          <div class="empty-ticket"><div class="empty-icon">＋</div><strong>Your ticket is empty</strong><p>Select an item from the menu<br>to start this order.</p></div>
+        </div>
+        <div class="ticket-footer">
+          <div class="ticket-actions"><button class="secondary-action" id="send-kot" disabled>▣ <span>Send & print KOT</span></button><button class="secondary-action kitchen-display-action" id="open-kitchen-display">▤ <span>Open kitchen display</span></button><div class="note-row"><span>＋</span><button>Add a note to the kitchen</button></div><div class="kot-status" id="kot-status">KOT not sent</div></div>
+          <div class="summary-row"><span>Subtotal</span><strong id="subtotal">₹0.00</strong></div>
+          <div class="summary-row muted" id="tax-row"><span>Tax <small id="tax-rate-label">(8.25%)</small></span><strong id="tax">₹0.00</strong></div>
+          <div class="total-row"><span>Total</span><strong id="total">₹0.00</strong></div>
+          <button class="checkout-button" id="checkout-button" disabled><span id="checkout-label">Charge</span><span id="charge-total">₹0.00</span><span>→</span></button>
+          <button class="next-order-button" id="next-order-button" hidden>Start next order</button>
+        </div>
+      </aside>
+    </main>
+  </div>
+  <div class="modal-backdrop" id="payment-modal" hidden>
+    <section class="payment-modal" role="dialog" aria-modal="true" aria-labelledby="payment-title">
+      <div class="settings-heading"><div><p class="eyebrow">Final step</p><h2 id="payment-title">Collect payment</h2></div><button class="close-button" id="close-payment" aria-label="Close payment">×</button></div>
+      <div class="payment-body"><div class="payment-total"><span>Amount due</span><strong id="payment-total">₹0.00</strong></div><div class="payment-methods"><button class="payment-method active" data-payment="Cash">Cash</button><button class="payment-method" data-payment="UPI">UPI</button><button class="payment-method" data-payment="Card">Card</button></div><div class="upi-payment" id="upi-payment" hidden><label class="upi-select-label">Receive payment in<select id="payment-upi-account"></select></label><div id="upi-qr"></div><strong>Scan to pay with UPI</strong><span id="upi-details">Amount will be filled automatically</span><label class="upi-confirm"><input id="upi-payment-confirmed" type="checkbox"> I have received the UPI payment</label></div><button class="save-button complete-payment" id="complete-payment">Mark paid & print bill</button><button class="secondary-action" id="reprint-receipt-btn" hidden>🖨️ <span>Reprint last receipt</span></button></div>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="booking-modal" hidden>
+    <section class="booking-modal" role="dialog" aria-modal="true" aria-labelledby="booking-title">
+      <div class="settings-heading"><div><p class="eyebrow">Reserve ahead</p><h2 id="booking-title">Book a cabin</h2></div><button class="close-button" id="close-booking" aria-label="Close booking">×</button></div>
+      <div class="booking-body">
+        <div class="booking-info"><strong>Select a cabin:</strong> <select id="booking-cabin"><option value="1">Cabin 1</option><option value="2">Cabin 2</option><option value="3">Cabin 3</option><option value="4">Cabin 4</option><option value="5">Cabin 5</option></select></div>
+        <form id="booking-form">
+          <label>Guest name * <input id="booking-name" type="text" placeholder="Enter guest name" required></label>
+          <label>Phone number * <input id="booking-phone" type="tel" placeholder="Enter phone number" required></label>
+          <label>Number of guests * <input id="booking-guests" type="number" min="1" placeholder="Number of guests" required></label>
+          <label>Date & time * <input id="booking-datetime" type="datetime-local" required></label>
+          <button class="save-button" type="submit">Confirm booking</button>
+        </form>
+      </div>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="reminder-modal" hidden>
+    <section class="reminder-modal" role="dialog" aria-modal="true">
+      <div class="reminder-content">
+        <div class="reminder-icon">🔔</div>
+        <h2>Cabin booking reminder</h2>
+        <p id="reminder-message">A guest is arriving soon</p>
+        <div id="reminder-details"></div>
+        <button class="save-button" id="close-reminder">Got it</button>
+      </div>
+    </section>
+  </div>
+  <div class="modal-backdrop login-backdrop" id="login-modal" hidden>
+    <section class="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <div class="login-brand"><span class="login-mark">AYM</span><div><p class="eyebrow">AL YAZI MANDI RESTRAUNT</p><h2 id="login-title">Welcome back</h2></div></div>
+      <p class="login-copy">Sign in to access the restaurant workspace.</p>
+      <form id="login-form"><label>User<select id="login-user"></select></label><label>Password<input id="login-password" type="password" placeholder="Enter password" required></label><p class="login-error" id="login-error"></p><button class="save-button" type="submit">Log in</button></form>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="change-password-modal" hidden>
+    <section class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
+      <div class="settings-heading"><div><p class="eyebrow">Account security</p><h2 id="change-password-title">Change password</h2></div><button class="close-button" id="close-change-password" aria-label="Close change password">×</button></div>
+      <div class="settings-view active" style="padding: 20px;">
+        <form id="change-password-form">
+          <label>Current password<input id="current-password" type="password" placeholder="Enter current password" required></label>
+          <label>New password<input id="new-password" type="password" placeholder="Enter new password" required></label>
+          <label>Confirm new password<input id="confirm-password" type="password" placeholder="Confirm new password" required></label>
+          <p class="login-error" id="password-change-error"></p>
+          <button class="save-button" type="submit">Update password</button>
+        </form>
+      </div>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="settings-modal" hidden>
+    <section class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="settings-heading"><div><p class="eyebrow">Restaurant control</p><h2 id="settings-title">Settings</h2></div><button class="close-button" id="close-settings" aria-label="Close settings">×</button></div>
+      <div class="settings-tabs"><button class="settings-tab active" data-settings-tab="printers">Printers</button><button class="settings-tab" data-settings-tab="menu-settings">Menu & pricing</button><button class="settings-tab" data-settings-tab="users">Users</button><button class="settings-tab" data-settings-tab="sales">Sales reports</button><button class="settings-tab super-admin-only" data-settings-tab="guests" hidden>Guests</button><button class="settings-tab" data-settings-tab="receipts">Receipt History</button></div>
+      <div class="settings-view active" id="printers-view">
+        <div class="settings-intro"><h3>Print destinations</h3><p>Choose where KOTs and receipts should go during service.</p></div>
+        <form id="printer-form">
+          <div class="printer-card"><div class="printer-card-heading"><span class="printer-icon">⌁</span><div><strong>Network printer</strong><small>Wi-Fi / LAN receipt printer</small></div><label class="switch"><input type="checkbox" id="network-enabled" checked><span></span></label></div><div class="form-grid"><label>Printer name<input id="network-name" value="Kitchen Network"></label><label>IP address<input id="network-ip" value="192.168.1.100" placeholder="192.168.1.100"></label><label>Port<input id="network-port" value="9100" inputmode="numeric"></label></div><div class="printer-footer"><span id="network-status"><i class="status-dot"></i> Ready to connect</span><button type="button" class="test-button" data-printer="network">Test print</button></div></div>
+          <div class="printer-card"><div class="printer-card-heading"><span class="printer-icon">▤</span><div><strong>Wired printer</strong><small>USB / direct receipt printer</small></div><label class="switch"><input type="checkbox" id="wired-enabled"><span></span></label></div><div class="form-grid"><label>Printer name<input id="wired-name" value="Front Counter"></label><label>Device / queue<input id="wired-device" value="USB001" placeholder="USB001"></label></div><div class="printer-footer"><span id="wired-status"><i class="status-dot offline"></i> Not connected</span><button type="button" class="test-button" data-printer="wired">Test print</button></div></div>
+          <button class="save-button" type="submit">Save printer settings</button>
+        </form>
+        <div class="whatsapp-card"><div><strong>WhatsApp & kitchen display</strong><small>Numbers are used to open a pre-filled WhatsApp KOT message.</small></div><div class="form-grid whatsapp-grid"><label>Kitchen WhatsApp<input id="kitchen-whatsapp" value="919999999999" placeholder="919999999999"></label><label>Billing user WhatsApp<input id="billing-whatsapp" value="919999999999" placeholder="919999999999"></label><label>Kitchen display URL<input id="kitchen-display-url" value="" placeholder="Optional shared display URL"></label></div><button class="save-button" id="save-integrations" type="button">Save workflow settings</button></div>
+        <div class="upi-accounts-card"><div><strong>Linked UPI accounts</strong><small>Link multiple bank UPI addresses and choose one at payment time.</small></div><div id="upi-accounts-list"></div><form class="upi-account-form" id="upi-account-form"><input id="new-upi-name" placeholder="Account name" required><input id="new-upi-bank" placeholder="Bank name" required><input id="new-upi-id" placeholder="UPI ID e.g. restaurant@upi" required><button class="save-button" type="submit">Link account</button></form></div>
+        <div class="print-settings-card"><div><strong>Print customization</strong><small>Customize the KOT and receipt header, details, and footer.</small></div><form id="print-settings-form"><div class="form-grid print-form-grid"><label>Print header<input id="print-header" value="AL YAZI MANDI RESTRAUNT"></label><label>Phone<input id="print-phone" value=""></label><label>Address<input id="print-address" value=""></label><label>Footer note<input id="print-footer" value="Thank you for dining with us"></label><label>Tax %<input id="print-tax-rate" type="number" min="0" step="0.01" value="8.25"></label></div><div class="print-checks"><label><input id="print-show-logo" type="checkbox" checked> Show logo</label><label><input id="print-show-tax" type="checkbox" checked> Show tax</label><label><input id="print-show-order-type" type="checkbox" checked> Show order type</label></div><button class="save-button" type="submit">Save print settings</button></form></div>
+      </div>
+      <div class="settings-view" id="menu-settings-view">
+        <div class="settings-intro"><h3>Menu & pricing</h3><p>Keep the service menu and selling prices up to date.</p></div>
+        <div class="menu-table-wrap"><table class="menu-table"><thead><tr><th>Item</th><th>Category</th><th>Price</th><th>Image</th><th></th></tr></thead><tbody id="menu-table-body"></tbody></table></div>
+        <form class="add-menu-form" id="add-menu-form"><input id="new-menu-name" placeholder="New menu item" required><select id="new-menu-category"><option value="Mandi">Mandi</option><option value="Chicken Mandi">Chicken Mandi</option><option value="BBQ">BBQ</option><option value="Extras">Extras</option></select><input id="new-menu-price" type="number" min="0" step="0.01" placeholder="Price" required><input id="new-menu-image" placeholder="Image URL (optional)"><label class="file-upload-btn"><span>📁</span><input id="new-menu-image-file" type="file" accept="image/*" style="display:none;" aria-label="Upload image for new item"></label><button class="save-button" type="submit">Add item</button></form><p class="voice-help">Hold “Hold to add item” and say: “Chicken Mandi two”. To create a new item: “Add menu [name], price [amount], category [section]”.</p>
+      </div>
+      <div class="settings-view" id="users-view">
+        <div class="settings-intro"><h3>Team users</h3><p>Create staff accounts and control what each role can access.</p></div>
+        <div class="role-legend"><div><strong>Super Admin</strong><span>Full access, settings, users and reports</span></div><div><strong>Admin</strong><span>Orders, menu, printers and reports</span></div><div><strong>User</strong><span>Orders, KOT and payments only</span></div></div>
+        <div class="user-table-wrap"><table class="user-table"><thead><tr><th>User</th><th>Role</th><th>Access</th><th></th></tr></thead><tbody id="user-table-body"></tbody></table></div>
+        <form class="user-form" id="user-form"><input id="new-user-name" placeholder="Full name" required><input id="new-user-email" type="email" placeholder="Email address" required><input id="new-user-phone" placeholder="Phone (optional)"><select id="new-user-role"><option>Super Admin</option><option>Admin</option><option selected>User</option></select><input id="new-user-password" type="password" placeholder="Temporary password" required><button class="save-button" type="submit">Create user</button></form>
+      </div>
+      <div class="settings-view" id="sales-view">
+        <div class="report-heading"><div class="settings-intro"><h3>Sales reports</h3><p>Private reporting for Super Admin. Review revenue by day, week, month, or a custom date range.</p></div><button class="export-button" id="export-sales">⇩ <span>Export Excel</span></button></div>
+        <div class="report-range-tabs"><button class="report-range active" data-range="day">Today</button><button class="report-range" data-range="week">This week</button><button class="report-range" data-range="month">This month</button><button class="report-range" data-range="custom">Custom</button></div>
+        <div class="custom-range" id="custom-range" hidden><label>From<input id="report-from" type="date"></label><label>To<input id="report-to" type="date"></label><button class="test-button" id="apply-custom-report" type="button">Apply range</button></div>
+        <div class="report-summary"><div><span>Gross sales</span><strong id="report-total">₹0.00</strong></div><div><span>Orders</span><strong id="report-orders">0</strong></div><div><span>Average order</span><strong id="report-average">₹0.00</strong></div></div>
+        <div class="sales-chart" id="sales-chart" aria-label="Sales chart"></div>
+        <div class="best-sellers-heading"><h3>Best-selling menu</h3><span>Highest to lowest sales</span></div>
+        <div class="best-sellers" id="best-sellers" aria-label="Best-selling menu chart"></div>
+      </div>
+      <div class="settings-view" id="guests-view">
+        <div class="report-heading"><div class="settings-intro"><h3>Guest directory</h3><p>Saved guest details for future visits and offer campaigns.</p></div><button class="export-button" id="export-guests">⇩ <span>Export Excel</span></button></div>
+        <div id="guest-directory-list" class="guest-directory-list"></div>
+      </div>
+      <div class="settings-view" id="receipts-view">
+        <div class="settings-intro"><h3>Receipt History</h3><p>View and reprint any receipt from previous orders.</p></div>
+        <div id="receipt-history-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+    </section>
+  </div>
+  <div id="print-sheet" aria-hidden="true"></div>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="app.js?v=2"></script>
+</body>
+</html>

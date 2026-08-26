@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f5efe5" />
+  <title>AL YAZI MANDI RESTRAUNT | Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Pirata+One&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #2d2924;
+      --muted: #81786c;
+      --line: #e4d8c7;
+      --paper: #f5efe5;
+      --panel: #fffaf2;
+      --sage: #71836b;
+      --sage-dark: #31594d;
+      --coral: #b95e3f;
+      --gold: #c79545;
+      font-family: "DM Sans", sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at 60% 30%, rgba(199,149,69,.18), transparent 45%),
+                  radial-gradient(circle at 15% 80%, rgba(113,131,107,.12), transparent 40%),
+                  var(--paper);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-card {
+      width: min(420px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 30px 80px rgba(45,41,36,.14);
+      padding: 40px 36px 36px;
+      animation: rise .35s ease;
+    }
+    .login-logo {
+      display: block;
+      width: 220px;
+      height: 68px;
+      object-fit: contain;
+      object-position: left center;
+      filter: invert(1);
+      mix-blend-mode: multiply;
+      margin-bottom: 28px;
+    }
+    .login-heading { margin-bottom: 6px; font: 600 28px/1.1 "Playfair Display", serif; color: var(--ink); }
+    .login-sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+    .login-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .login-field label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+    .login-field select,
+    .login-field input {
+      height: 42px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: white;
+      color: var(--ink);
+      font: 13px "DM Sans", sans-serif;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .login-field select:focus,
+    .login-field input:focus { border-color: var(--sage-dark); box-shadow: 0 0 0 3px rgba(49,89,77,.1); }
+    .login-error { min-height: 16px; margin-bottom: 8px; color: var(--coral); font-size: 11px; font-weight: 500; }
+    .login-btn {
+      width: 100%;
+      height: 44px;
+      border: none;
+      border-radius: 5px;
+      background: var(--sage-dark);
+      color: white;
+      font: 600 13px "DM Sans", sans-serif;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      margin-top: 4px;
+    }
+    .login-btn:hover { background: #29503f; }
+    .login-btn:active { transform: scale(.98); }
+    .login-divider { height: 1px; background: var(--line); margin: 26px 0 22px; }
+    .login-footer { font-size: 11px; color: var(--muted); text-align: center; }
+    .login-toggle { text-align: center; margin-top: 16px; font-size: 12px; }
+    .login-toggle a { color: var(--sage-dark); font-weight: 600; text-decoration: none; }
+    .login-toggle a:hover { text-decoration: underline; }
+    .login-success { min-height: 16px; margin-bottom: 8px; color: var(--sage-dark); font-size: 11px; font-weight: 500; }
+    @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <img class="login-logo" src="al-yazi-mandi-logo.png" alt="AL YAZI MANDI RESTRAUNT" />
+    <h1 class="login-heading">Welcome back</h1>
+    <p class="login-sub">Sign in to access the restaurant workspace.</p>
+    <form id="login-form">
+      <div class="login-field">
+        <label for="login-user">Staff member</label>
+        <select id="login-user"></select>
+      </div>
+      <div class="login-field">
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" placeholder="Enter your password" required autocomplete="current-password" />
+      </div>
+      <p class="login-error" id="login-error"></p>
+      <button class="login-btn" type="submit">Sign in →</button>
+    </form>
+
+    <form id="change-password-form" hidden>
+      <div class="login-field">
+        <label for="cp-user">Super Admin account</label>
+        <select id="cp-user"></select>
+      </div>
+      <div class="login-field">
+        <label for="cp-current">Current password</label>
+        <input id="cp-current" type="password" placeholder="Enter current password" required autocomplete="current-password" />
+      </div>
+      <div class="login-field">
+        <label for="cp-new">New password</label>
+        <input id="cp-new" type="password" placeholder="Enter new password" required autocomplete="new-password" />
+      </div>
+      <div class="login-field">
+        <label for="cp-confirm">Confirm new password</label>
+        <input id="cp-confirm" type="password" placeholder="Confirm new password" required autocomplete="new-password" />
+      </div>
+      <p class="login-error" id="cp-error"></p>
+      <p class="login-success" id="cp-success"></p>
+      <button class="login-btn" type="submit">Update password</button>
+    </form>
+
+    <p class="login-toggle"><a href="#" id="show-change-password">Change Super Admin password</a></p>
+    <p class="login-toggle" id="show-signin" hidden><a href="#" id="back-to-signin">Back to sign in</a></p>
+    <div class="login-divider"></div>
+    <p class="login-footer">AL YAZI MANDI RESTRAUNT &nbsp;·&nbsp; Staff access only</p>
+  </div>
+
+  <script>
+    // Check if already logged in — redirect straight to billing
+    (function() {
+      if (sessionStorage.getItem("alyazi-current-user")) {
+        window.location.replace("/billing");
+      }
+    })();
+
+    let users = JSON.parse(localStorage.getItem("alyazi-users-v1") || "null") || [
+      { id: 1, name: "Restaurant Owner", email: "owner@alyazi.com", phone: "", role: "Super Admin", password: "admin123" }
+    ];
+
+    const heading = document.querySelector(".login-heading");
+    const sub = document.querySelector(".login-sub");
+    const loginForm = document.getElementById("login-form");
+    const changePasswordForm = document.getElementById("change-password-form");
+    const showChangePasswordLink = document.getElementById("show-change-password");
+    const backToSigninLink = document.getElementById("back-to-signin");
+    const showSigninRow = document.getElementById("show-signin");
+    const showChangePasswordRow = showChangePasswordLink.parentElement;
+
+    const select = document.getElementById("login-user");
+    select.innerHTML = users.map(u => `<option value="${u.id}">${u.name} · ${u.role}</option>`).join("");
+
+    const cpSelect = document.getElementById("cp-user");
+    function renderSuperAdmins() {
+      cpSelect.innerHTML = users
+        .filter(u => u.role === "Super Admin")
+        .map(u => `<option value="${u.id}">${u.name}</option>`)
+        .join("");
+    }
+    renderSuperAdmins();
+
+    document.getElementById("login-form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const user = users.find(u => u.id === Number(select.value));
+      const password = document.getElementById("login-password").value;
+      const errorEl = document.getElementById("login-error");
+
+      if (!user || (user.password || "admin123") !== password) {
+        errorEl.textContent = "Incorrect password. Please try again.";
+        return;
+      }
+
+      errorEl.textContent = "";
+      sessionStorage.setItem("alyazi-current-user", JSON.stringify(user));
+      window.location.replace("/billing");
+    });
+
+    function showChangePassword() {
+      loginForm.hidden = true;
+      changePasswordForm.hidden = false;
+      showChangePasswordRow.hidden = true;
+      showSigninRow.hidden = false;
+      heading.textContent = "Reset password";
+      sub.textContent = "Only Super Admin accounts can be reset here.";
+      renderSuperAdmins();
+      document.getElementById("cp-current").value = "";
+      document.getElementById("cp-new").value = "";
+      document.getElementById("cp-confirm").value = "";
+      document.getElementById("cp-error").textContent = "";
+      document.getElementById("cp-success").textContent = "";
+    }
+
+    function showSignin() {
+      changePasswordForm.hidden = true;
+      loginForm.hidden = false;
+      showChangePasswordRow.hidden = false;
+      showSigninRow.hidden = true;
+      heading.textContent = "Welcome back";
+      sub.textContent = "Sign in to access the restaurant workspace.";
+    }
+
+    showChangePasswordLink.addEventListener("click", function(e) {
+      e.preventDefault();
+      showChangePassword();
+    });
+
+    backToSigninLink.addEventListener("click", function(e) {
+      e.preventDefault();
+      showSignin();
+    });
+
+    changePasswordForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      const user = users.find(u => u.id === Number(cpSelect.value) && u.role === "Super Admin");
+      const currentPassword = document.getElementById("cp-current").value;
+      const newPassword = document.getElementById("cp-new").value;
+      const confirmPassword = document.getElementById("cp-confirm").value;
+      const errorEl = document.getElementById("cp-error");
+      const successEl = document.getElementById("cp-success");
+      successEl.textContent = "";
+
+      if (!user) {
+        errorEl.textContent = "No Super Admin account found.";
+        return;
+      }
+      if ((user.password || "admin123") !== currentPassword) {
+        errorEl.textContent = "Current password is incorrect.";
+        return;
+      }
+      if (newPassword.length < 6) {
+        errorEl.textContent = "New password must be at least 6 characters.";
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        errorEl.textContent = "Passwords do not match.";
+        return;
+      }
+
+      errorEl.textContent = "";
+      user.password = newPassword;
+      localStorage.setItem("alyazi-users-v1", JSON.stringify(users));
+      successEl.textContent = "Password updated. You can now sign in.";
+      document.getElementById("cp-current").value = "";
+      document.getElementById("cp-new").value = "";
+      document.getElementById("cp-confirm").value = "";
+    });
+  </script>
+</body>
+</html>
