@@ -454,7 +454,10 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
   /* display:none (not visibility:hidden) so hidden UI stops contributing to
      document height — otherwise the printer paginates across the whole
      app's layout and prints mostly-blank pages after the receipt. */
-  @page { size: 80mm auto; margin: 0; }
+  /* Paper size is applied at runtime via a dynamically injected #dynamic-print-size
+     style tag (see applyPrintPaperSize in app.js) so it can follow the Super
+     Admin's saved choice — manual mm sizes, or "auto" to defer to the printer's
+     own driver profile instead of forcing a CSS page size. */
   body.print-ticket .app-shell,
   body.print-ticket .sync-widget,
   body.print-ticket .toast,

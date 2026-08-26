@@ -54,6 +54,7 @@ let selectedUpiId = upiAccounts[0]?.id || null;
 let printSettings = JSON.parse(localStorage.getItem("alyazi-print-settings-v1") || "null") || { phone: "", whatsapp: "", address: "", footer: "Thank you for dining with us", showLogo: true, showTax: true, showOrderType: true };
 printSettings.whatsapp = printSettings.whatsapp || "";
 printSettings.headerAlign = printSettings.headerAlign || "center";
+printSettings.paperSize = printSettings.paperSize || "80mm";
 printSettings.footerAlign = printSettings.footerAlign || "center";
 let users = JSON.parse(localStorage.getItem("alyazi-users-v1") || "null") || [{ id: 1, name: "abu", email: "owner@alyazi.com", phone: "", role: "Super Admin", password: "admin123" }];
 users = users.map(user => ({ ...user, password: user.password || "admin123" }));
@@ -686,19 +687,43 @@ function buildReceiptPreviewHtml(headerAlign, footerAlign) {
   return `<div style="text-align:${headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}${printSettings.address ? `<p>${printSettings.address}</p>` : ""}${printSettings.phone ? `<p>Ph: ${printSettings.phone}</p>` : ""}</div><hr><div style="text-align:center"><h2>RECEIPT</h2></div><div class="print-line"><span>Guest</span><span>Sample Guest 9999999999</span></div><div class="print-line"><span>Order type</span><span>Dine In</span></div><div class="print-line"><span>Table</span><span>Cabin 1</span></div><div class="print-line"><span>Order #</span><span>1001</span></div><div class="print-line"><span>Date</span><span>${new Date().toLocaleString()}</span></div><hr><div class="print-line"><span>1 x Mutton Yemeni Mandi</span><strong>₹395.00</strong></div><div class="print-line"><span>1 x Chicken Alfaham Mandi</span><strong>₹270.00</strong></div><hr><div class="print-line"><span>Subtotal</span><strong>₹665.00</strong></div><div class="print-line print-total"><span>Total</span><strong>₹719.86</strong></div>${printSettings.footer ? `<hr><div style="text-align:${footerAlign}"><p>${printSettings.footer}</p></div>` : ""}`;
 }
 
+// "auto" leaves @page unset entirely so a real printer's own driver profile
+// decides the page — the manual sizes below force a specific CSS page size,
+// which mainly matters when printing to PDF or a driver that defers to it.
+const PAPER_SIZES = {
+  auto: { page: null, printWidth: "76mm", previewWidth: 210 },
+  "58mm": { page: "58mm auto", printWidth: "50mm", previewWidth: 138 },
+  "80mm": { page: "80mm auto", printWidth: "76mm", previewWidth: 210 },
+  a4: { page: "210mm 297mm", printWidth: "180mm", previewWidth: 497 },
+};
+
+function applyPrintPaperSize() {
+  const preset = PAPER_SIZES[printSettings.paperSize] || PAPER_SIZES["80mm"];
+  let styleEl = document.querySelector("#dynamic-print-size");
+  if (!styleEl) {
+    styleEl = document.createElement("style");
+    styleEl.id = "dynamic-print-size";
+    document.head.appendChild(styleEl);
+  }
+  const pageRule = preset.page ? `@page { size: ${preset.page}; margin: 0; }` : "";
+  styleEl.textContent = `@media print { ${pageRule} body.print-ticket #print-sheet { width: ${preset.printWidth}; } }`;
+}
+
 function getReceiptLayoutDraft() {
   const draft = {};
   document.querySelectorAll("#receipt-layout-card .align-group").forEach(group => {
     const activeBtn = group.querySelector(".align-buttons button.active");
-    draft[group.dataset.zone] = activeBtn ? activeBtn.dataset.align : "center";
+    draft[group.dataset.zone] = activeBtn ? activeBtn.dataset.align : printSettings[group.dataset.zone];
   });
   return draft;
 }
 
 function renderReceiptLayoutPreview() {
   const draft = getReceiptLayoutDraft();
-  document.querySelector("#receipt-layout-preview").innerHTML =
-    buildReceiptPreviewHtml(draft.headerAlign, draft.footerAlign);
+  const preset = PAPER_SIZES[draft.paperSize] || PAPER_SIZES["80mm"];
+  const preview = document.querySelector("#receipt-layout-preview");
+  preview.style.width = preset.previewWidth + "px";
+  preview.innerHTML = buildReceiptPreviewHtml(draft.headerAlign, draft.footerAlign);
 }
 
 function renderReceiptLayoutEditor() {
@@ -726,7 +751,9 @@ document.querySelector("#save-receipt-layout").addEventListener("click", () => {
   const draft = getReceiptLayoutDraft();
   printSettings.headerAlign = draft.headerAlign;
   printSettings.footerAlign = draft.footerAlign;
+  printSettings.paperSize = draft.paperSize;
   localStorage.setItem("alyazi-print-settings-v1", JSON.stringify(printSettings));
+  applyPrintPaperSize();
   showToast("Receipt layout saved");
 });
 
@@ -1833,6 +1860,7 @@ renderCabinTabs();
 renderLoginUsers();
 updateSession();
 renderUpiAccounts();
+applyPrintPaperSize();
 
 // --- Sync: snapshots all alyazi-* localStorage keys into IndexedDB every
 // 20s and on demand, then best-effort mirrors the same snapshot to the

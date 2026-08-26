@@ -209,9 +209,18 @@
         <div class="upi-accounts-card"><div><strong>Linked UPI accounts</strong><small>Link multiple bank UPI addresses and choose one at payment time.</small></div><div id="upi-accounts-list"></div><form class="upi-account-form" id="upi-account-form"><input id="new-upi-name" placeholder="Account name" required><input id="new-upi-bank" placeholder="Bank name" required><input id="new-upi-id" placeholder="UPI ID e.g. restaurant@upi" required><button class="save-button" type="submit">Link account</button></form></div>
         <div class="print-settings-card"><div><strong>Print customization</strong><small>Customize the KOT and receipt header, details, and footer.</small></div><form id="print-settings-form"><div class="form-grid print-form-grid"><label>Phone<input id="print-phone" value="" placeholder="9999999999, 8888888888"></label><label>Address<input id="print-address" value=""></label><label>Footer note<input id="print-footer" value="Thank you for dining with us"></label><label>Tax %<input id="print-tax-rate" type="number" min="0" step="0.01" value="8.25"></label><label>WhatsApp<input id="print-whatsapp" value="" placeholder="9999999999, 8888888888"></label></div><div class="print-checks"><label><input id="print-show-logo" type="checkbox" checked> Show logo</label><label><input id="print-show-tax" type="checkbox" checked> Show tax</label><label><input id="print-show-order-type" type="checkbox" checked> Show order type</label></div><button class="save-button" type="submit">Save print settings</button></form></div>
         <div class="print-settings-card" id="receipt-layout-card" hidden>
-          <div><strong>Receipt layout</strong><small>Super Admin only — set text alignment for the header and footer. Order details always print as compact left/right rows to save paper.</small></div>
+          <div><strong>Receipt layout & paper</strong><small>Super Admin only — choose paper size and text alignment, with a live preview. Order details always print as compact left/right rows to save paper.</small></div>
           <div class="layout-editor">
             <div class="layout-editor-controls">
+              <div class="align-group" data-zone="paperSize">
+                <label>Paper size</label>
+                <div class="align-buttons">
+                  <button type="button" data-align="auto">Auto</button>
+                  <button type="button" data-align="58mm">58mm</button>
+                  <button type="button" data-align="80mm">80mm</button>
+                  <button type="button" data-align="a4">A4 / Full page</button>
+                </div>
+              </div>
               <div class="align-group" data-zone="headerAlign">
                 <label>Business header</label>
                 <div class="align-buttons">
