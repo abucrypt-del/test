@@ -2054,3 +2054,49 @@ async function runSync({ manual = false } = {}) {
 document.querySelector("#sync-button")?.addEventListener("click", () => runSync({ manual: true }));
 setInterval(() => runSync({ manual: false }), 20000);
 runSync({ manual: false });
+
+// --- Topbar status strip: today's date, plus whether the restaurant is
+// open (a Super Admin-set flag, persisted locally) and actually reachable
+// (browser connectivity). "Closed" always wins over "online" — a closed but
+// connected browser should never read as serving customers.
+function isServiceOpen() {
+  const stored = localStorage.getItem("alyazi-service-open-v1");
+  return stored === null ? true : stored === "true";
+}
+function setServiceOpen(open) {
+  localStorage.setItem("alyazi-service-open-v1", String(open));
+  renderServiceStatus();
+}
+function renderServiceStatus() {
+  const wrap = document.querySelector("#service-status");
+  const dot = document.querySelector("#service-status-dot");
+  const text = document.querySelector("#service-status-text");
+  const dateEl = document.querySelector("#service-status-date");
+  if (!wrap) return;
+  dateEl.textContent = new Date().toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+  const open = isServiceOpen();
+  const online = navigator.onLine;
+  dot.classList.remove("offline", "closed");
+  if (!open) {
+    dot.classList.add("closed");
+    text.textContent = "Service closed";
+  } else if (online) {
+    text.textContent = "Service is live";
+  } else {
+    dot.classList.add("offline");
+    text.textContent = "Offline";
+  }
+  const canToggle = currentUser.role === "Super Admin";
+  wrap.classList.toggle("clickable", canToggle);
+  wrap.title = canToggle ? "Click to mark service open/closed" : "";
+}
+document.querySelector("#service-status")?.addEventListener("click", () => {
+  if (currentUser.role !== "Super Admin") return;
+  const open = isServiceOpen();
+  setServiceOpen(!open);
+  showToast(open ? "Service marked closed" : "Service marked live");
+});
+window.addEventListener("online", renderServiceStatus);
+window.addEventListener("offline", renderServiceStatus);
+setInterval(renderServiceStatus, 60000);
+renderServiceStatus();

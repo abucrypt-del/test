@@ -34,7 +34,10 @@ button { border: 0; font: inherit; cursor: pointer; color: inherit; }
 .brand strong { display: block; font: 400 22px/20px "Pirata One", cursive; letter-spacing: .02em; }
 .brand small { font: 600 10px/1 "DM Sans", sans-serif; color: var(--coral); letter-spacing: .19em; }
 .service-status { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; }
+.service-status.clickable { cursor: pointer; }
 .status-dot { width: 7px; height: 7px; background: #7fa15b; border-radius: 50%; box-shadow: 0 0 0 4px #e8eee0; }
+.status-dot.offline { background: #b7b8b0; box-shadow: 0 0 0 4px #ececea; }
+.status-dot.closed { background: var(--coral); box-shadow: 0 0 0 4px #f3e2da; }
 .status-divider { width: 1px; height: 16px; background: var(--line); margin: 0 4px; }
 .topbar-actions { display: flex; align-items: center; gap: 22px; }
 .account-menu { width: 190px; position: absolute; z-index: 5; top: 78px; right: 4vw; padding: 13px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); box-shadow: 0 12px 28px rgba(45,41,36,.13); }
