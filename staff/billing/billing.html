@@ -19,9 +19,9 @@
         const xhr = new XMLHttpRequest();
         xhr.open("GET", "/api/auth/session", false);
         xhr.send(null);
-        if (xhr.status !== 200) window.location.replace("/");
+        if (xhr.status !== 200) window.location.replace("/staff/billing/");
       } catch {
-        window.location.replace("/");
+        window.location.replace("/staff/billing/");
       }
     })();
   </script>

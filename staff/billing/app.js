@@ -76,14 +76,14 @@ localStorage.setItem("alyazi-users-v1", JSON.stringify(users));
 // sessionStorage only carries display metadata for this device.
 let currentUser = (function() {
   const stored = sessionStorage.getItem("alyazi-current-user");
-  if (!stored) { window.location.replace("/"); return null; }
+  if (!stored) { window.location.replace("/staff/billing/"); return null; }
   const parsed = JSON.parse(stored);
   // Re-validate against latest users list so password changes (and account
   // locks) take effect on the next page load, not just the next login.
   const freshUser = users.find(u => u.id === parsed.id) || parsed;
   if (freshUser.locked) {
     sessionStorage.removeItem("alyazi-current-user");
-    window.location.replace("/");
+    window.location.replace("/staff/billing/");
     return null;
   }
   return freshUser;
@@ -1622,7 +1622,7 @@ const accountMenu = document.querySelector("#account-menu");
 const loginModal = document.querySelector("#login-modal");
 const changePasswordModal = document.querySelector("#change-password-modal");
 document.querySelector("#profile-button").addEventListener("click", () => { accountMenu.hidden = !accountMenu.hidden; document.querySelector("#notifications-panel").hidden = true; });
-document.querySelector("#logout-button").addEventListener("click", async () => { accountMenu.hidden = true; await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {}); sessionStorage.removeItem("alyazi-current-user"); window.location.replace("/"); });
+document.querySelector("#logout-button").addEventListener("click", async () => { accountMenu.hidden = true; await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {}); sessionStorage.removeItem("alyazi-current-user"); window.location.replace("/staff/billing/"); });
 document.querySelector("#switch-user").addEventListener("click", () => { accountMenu.hidden = true; renderLoginUsers(); loginModal.hidden = false; });
 document.querySelector("#change-password-btn").addEventListener("click", () => { accountMenu.hidden = true; changePasswordModal.hidden = false; document.querySelector("#current-password").value = ""; document.querySelector("#new-password").value = ""; document.querySelector("#confirm-password").value = ""; document.querySelector("#password-change-error").textContent = ""; });
 document.querySelector("#close-change-password").addEventListener("click", () => { changePasswordModal.hidden = true; });
