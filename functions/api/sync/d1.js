@@ -113,7 +113,13 @@ async function upsertUsers(db, snapshot) {
          password = excluded.password, locked = excluded.locked, updated_at = datetime('now')`
     ).bind(user.id, user.name, user.email ?? "", user.phone ?? "", user.role ?? "User",
       user.password ?? null, user.locked ? 1 : 0));
-  if (stmts.length) await db.batch(stmts);
+  if (!stmts.length) return;
+  try {
+    await db.batch(stmts);
+  } catch (err) {
+    // The users table may not be migrated on this environment yet — don't
+    // let that take down the rest of the sync (menu/bookings/sales/etc).
+  }
 }
 
 async function upsertResetRequests(db, snapshot) {
@@ -188,11 +194,18 @@ export async function onRequestGet({ env }) {
     });
   }
 
-  const userRows = await db.prepare("SELECT * FROM users ORDER BY id").all();
-  const users = userRows.results.map(row => ({
-    id: row.legacy_id, name: row.name, email: row.email || "", phone: row.phone || "",
-    role: row.role, password: row.password || undefined, locked: !!row.locked,
-  }));
+  // The users table may not be migrated on this environment yet — don't let
+  // that take down the rest of the sync (menu/bookings/sales/etc).
+  let users = [];
+  try {
+    const userRows = await db.prepare("SELECT * FROM users ORDER BY id").all();
+    users = userRows.results.map(row => ({
+      id: row.legacy_id, name: row.name, email: row.email || "", phone: row.phone || "",
+      role: row.role, password: row.password || undefined, locked: !!row.locked,
+    }));
+  } catch (err) {
+    // ignore — falls back to empty, same as "no users synced yet"
+  }
 
   const resetRequestRows = await db.prepare("SELECT * FROM password_reset_requests ORDER BY id").all();
   const resetRequests = resetRequestRows.results.map(row => ({
