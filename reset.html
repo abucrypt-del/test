@@ -177,7 +177,7 @@
     (function() {
       var card = document.querySelector(".login-card");
       if (!card || window.matchMedia("(pointer: coarse)").matches) return;
-      var maxTilt = 8;
+      var maxTilt = 4;
       function onMove(e) {
         var rect = card.getBoundingClientRect();
         var px = (e.clientX - rect.left) / rect.width;
