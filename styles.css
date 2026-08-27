@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Font02";
+  src: url("font 02.ttf") format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --ink: #2d2924;
   --muted: #81786c;
@@ -21,7 +29,7 @@ button { border: 0; font: inherit; cursor: pointer; color: inherit; }
 .topbar { height: 106px; padding: 0 4vw; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: #fbfaf7; }
 .brand { display: flex; align-items: center; text-decoration: none; color: var(--ink); letter-spacing: -.02em; }
 .brand-logo { width: 350px; height: 104px; display: block; object-fit: contain; object-position: left center; filter: invert(1); mix-blend-mode: multiply; }
-.brand-mark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--sage-dark); color: #f7f5ee; font: 700 14px/1 "Playfair Display", serif; letter-spacing: -.13em; padding-right: 3px; }
+.brand-mark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--sage-dark); color: #f7f5ee; font: 700 14px/1 "Font02", serif; letter-spacing: -.13em; padding-right: 3px; }
 .brand-mark span { color: #efb976; font-size: 11px; }
 .brand strong { display: block; font: 400 22px/20px "Pirata One", cursive; letter-spacing: .02em; }
 .brand small { font: 600 10px/1 "DM Sans", sans-serif; color: var(--coral); letter-spacing: .19em; }
@@ -83,7 +91,7 @@ button { border: 0; font: inherit; cursor: pointer; color: inherit; }
 .voice-help { margin: 9px 0 0; color: var(--muted); font-size: 10px; }
 .eyebrow { margin: 0 0 12px; color: var(--coral); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
 .eyebrow span { color: #a9ad9f; margin: 0 4px; }
-h1, h2 { margin: 0; font-family: "Playfair Display", serif; font-weight: 700; letter-spacing: -.045em; }
+h1, h2 { margin: 0; font-family: "Font02", serif; font-weight: 700; letter-spacing: -.045em; }
 h1 { font-size: clamp(32px, 3.3vw, 49px); line-height: 1.02; }
 .subtitle { margin: 12px 0 0; color: var(--muted); font-size: 14px; }
 .outline-button { height: 42px; padding: 0 12px; display: flex; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 4px; background: rgba(255,255,255,.4); color: var(--muted); font-size: 13px; }
@@ -106,7 +114,7 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 .badge { position: absolute; z-index: 1; top: 12px; left: 12px; padding: 6px 10px; border-radius: 4px; background: rgba(251,250,247,.95); color: var(--sage-dark); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 2px 6px rgba(0,0,0,.1); }
 .menu-code-badge { position: absolute; z-index: 1; top: 12px; right: 12px; padding: 5px 8px; border-radius: 4px; background: rgba(45,41,36,.7); color: #fff; font-size: 10px; font-weight: 700; letter-spacing: .04em; }
 .card-content { flex: 1; padding: 18px; display: flex; flex-direction: column; }
-.card-content h3 { margin: 0 0 8px; font: 700 13px/1.2 "Playfair Display", serif; color: var(--ink); letter-spacing: -.01em; }
+.card-content h3 { margin: 0 0 8px; font: 700 13px/1.2 "Font02", serif; color: var(--ink); letter-spacing: -.01em; }
 .card-content p { margin: 0 0 auto; color: var(--muted); font-size: 12px; line-height: 1.5; display: none; }
 .card-bottom { margin-top: 12px; padding-top: 12px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #f0ebe2; }
 .price { font-size: 16px; font-weight: 700; color: var(--ink); }
@@ -139,7 +147,7 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 .empty-search strong { display: block; color: var(--ink); font-size: 16px; margin-bottom: 8px; }
 .empty-search p { font-size: 12px; }
 .order-item { padding: 13px 0; display: grid; grid-template-columns: 1fr auto; gap: 8px; border-bottom: 1px solid var(--line); animation: slide-in .22s ease both; }
-.order-name { font: 600 15px "Playfair Display", serif; }
+.order-name { font: 600 15px "Font02", serif; }
 .order-price { font-size: 13px; font-weight: 600; }
 .order-controls { margin-top: 8px; display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 11px; }
 .order-controls button { width: 20px; height: 20px; border-radius: 50%; background: #eeede7; color: var(--sage-dark); line-height: 1; }
@@ -169,7 +177,7 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 .discount-control input { width: 64px; height: 28px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; background: white; color: var(--ink); font-size: 12px; text-align: right; }
 .discount-control input:focus { outline: 0; border-color: var(--sage-dark); }
 .discount-control select { height: 28px; padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; background: white; color: var(--ink); font-size: 12px; }
-.total-row { margin-top: 18px; padding-top: 17px; border-top: 1px solid var(--line); font: 700 18px "Playfair Display", serif; }
+.total-row { margin-top: 18px; padding-top: 17px; border-top: 1px solid var(--line); font: 700 18px "Font02", serif; }
 .checkout-button { width: 100%; height: 48px; margin-top: 12px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px 0 17px; border-radius: 4px; background: var(--coral); color: white; font-size: 13px; font-weight: 700; transition: opacity .2s, transform .2s; }
 .checkout-button:not(:disabled):hover { transform: translateY(-2px); }
 .checkout-button:disabled { opacity: .42; cursor: not-allowed; }
@@ -205,7 +213,7 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 .settings-tab.active:after { content: ""; height: 3px; position: absolute; right: 0; bottom: -1px; left: 0; background: var(--coral); border-radius: 999px; }
 .settings-view { display: none; padding: 28px 32px 32px; }
 .settings-view.active { display: block; }
-.settings-intro h3 { margin: 0; font: 700 26px/1.1 "Playfair Display", serif; letter-spacing: -.04em; }
+.settings-intro h3 { margin: 0; font: 700 26px/1.1 "Font02", serif; letter-spacing: -.04em; }
 .settings-intro p { margin: 8px 0 18px; color: var(--muted); font-size: 14px; line-height: 1.5; }
 .report-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .report-heading .settings-intro { flex: 1; }
@@ -254,7 +262,7 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 .payment-modal { width: min(430px, 100%); overflow: hidden; border-radius: 7px; background: var(--panel); box-shadow: 0 25px 70px rgba(29,32,26,.24); }
 .payment-body { padding: 25px 30px 30px; }
 .payment-total { padding: 16px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--line); border-radius: 4px; background: #f5f7ef; color: var(--muted); font-size: 12px; }
-.payment-total strong { color: var(--ink); font: 700 25px "Playfair Display",serif; }
+.payment-total strong { color: var(--ink); font: 700 25px "Font02",serif; }
 .payment-methods { margin: 20px 0; display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
 .payment-method { padding: 11px 5px; border: 1px solid var(--line); border-radius: 3px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; }
 .payment-method.active { border-color: var(--sage-dark); background: #e8eee0; color: var(--sage-dark); }
@@ -284,7 +292,7 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 .reminder-modal { width: min(380px, 100%); text-align: center; border-radius: 12px; background: var(--panel); box-shadow: 0 25px 70px rgba(29,32,26,.24); padding: 30px 25px; }
 .reminder-content { display: flex; flex-direction: column; align-items: center; }
 .reminder-icon { font-size: 48px; margin-bottom: 15px; }
-.reminder-modal h2 { margin: 0 0 10px; font: 700 22px "Playfair Display", serif; color: var(--ink); }
+.reminder-modal h2 { margin: 0 0 10px; font: 700 22px "Font02", serif; color: var(--ink); }
 .reminder-modal p { margin: 0 0 15px; color: var(--muted); font-size: 13px; }
 #reminder-details { margin-bottom: 20px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: #f5f7ef; font-size: 12px; }
 #reminder-details strong { display: block; color: var(--ink); margin-bottom: 5px; }
@@ -356,12 +364,12 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 @keyframes cabin-ready-blink { 0%, 100% { border-color: #5c7330; box-shadow: 0 0 0 3px rgba(92,115,48,.28); } 50% { border-color: #7f9a48; box-shadow: 0 0 0 4px rgba(127,154,72,.45), 0 0 18px rgba(127,154,72,.35); } }
 @keyframes voice-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(193,55,39,.2); } 50% { box-shadow: 0 0 0 5px rgba(193,55,39,.18); } }
 .best-sellers-heading { margin: 25px 0 12px; display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--line); padding-top: 20px; }
-.best-sellers-heading h3 { margin: 0; font: 700 18px "Playfair Display", serif; }
+.best-sellers-heading h3 { margin: 0; font: 700 18px "Font02", serif; }
 .best-sellers-heading span { color: var(--muted); font-size: 10px; }
 .best-sellers { border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
 .best-seller-row { min-height: 59px; padding: 9px 12px; display: grid; grid-template-columns: 22px minmax(120px, 1fr) 50px 72px; gap: 9px; align-items: center; border-bottom: 1px solid var(--line); }
 .best-seller-row:last-child { border-bottom: 0; }
-.rank { color: var(--gold); font: 700 15px "Playfair Display", serif; text-align: center; }
+.rank { color: var(--gold); font: 700 15px "Font02", serif; text-align: center; }
 .best-seller-info { min-width: 0; }
 .best-seller-info strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
 .rank-bar { height: 5px; margin-top: 7px; overflow: hidden; border-radius: 5px; background: #eee9df; }
@@ -425,7 +433,7 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 .login-backdrop { background: rgba(29,32,26,.5); }
 .login-modal { width: min(400px, 100%); padding: 29px; border-radius: 7px; background: var(--panel); box-shadow: 0 25px 70px rgba(29,32,26,.24); }
 .login-brand { display: flex; align-items: center; gap: 12px; }
-.login-mark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--sage-dark); color: white; font: 700 11px "Playfair Display", serif; }
+.login-mark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--sage-dark); color: white; font: 700 11px "Font02", serif; }
 .login-brand .eyebrow { margin-bottom: 5px; font-size: 9px; }
 .login-brand h2 { font-size: 26px; }
 .login-copy { margin: 18px 0 21px; color: var(--muted); font-size: 12px; }
@@ -444,7 +452,7 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 .report-summary div { padding: 13px; border: 1px solid var(--line); border-radius: 4px; background: #f5f7ef; }
 .report-summary span, .report-summary strong { display: block; }
 .report-summary span { color: var(--muted); font-size: 10px; }
-.report-summary strong { margin-top: 5px; color: var(--sage-dark); font: 700 20px "Playfair Display", serif; }
+.report-summary strong { margin-top: 5px; color: var(--sage-dark); font: 700 20px "Font02", serif; }
 .sales-chart { height: 185px; padding: 17px 13px 0; display: flex; align-items: end; justify-content: space-around; gap: 8px; border-top: 1px solid var(--line); }
 .chart-column { height: 100%; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: end; gap: 6px; }
 .chart-column strong { color: var(--muted); font-size: 8px; white-space: nowrap; }
