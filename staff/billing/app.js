@@ -1777,6 +1777,7 @@ document.querySelector("#booking-form").addEventListener("submit", event => {
     cancelled: false,
     notifiedHour: false,
     notifiedHalfHour: false,
+    source: "staff",
   };
   bookings.push(booking);
   saveBookings(bookings);
@@ -1807,7 +1808,8 @@ function renderBookingsList() {
     const canModify = !booking.cancelled && !isPast;
     const actions = canModify ? `${canEdit ? ` <button class="secondary-action" data-edit-booking="${booking.id}" style="padding:3px 8px;font-size:9px;margin-left:6px;margin-top:0;">✎ Edit</button>` : ""}${canCancel ? ` <button class="secondary-action" data-cancel-booking="${booking.id}" style="padding:3px 8px;font-size:9px;margin-left:6px;margin-top:0;">✕ Cancel</button>` : ""}` : "";
     const reasonLine = booking.cancelled && booking.cancelReason ? `<small>Reason: ${escapeHtml(booking.cancelReason)}</small>` : "";
-    return `<div class="guest-directory-row"><div><strong>${escapeHtml(booking.cabinName)} · ${escapeHtml(booking.name)}</strong><small>${booking.guests} guest${booking.guests === 1 ? "" : "s"} · ${escapeHtml(booking.phone)} · ${formatBookingWhen(booking.datetime)}</small>${reasonLine}</div><span>${statusLabel}${actions}</span></div>`;
+    const sourceTag = booking.source === "web" ? ` · <strong style="color:var(--sage-dark);">Web booking</strong>` : "";
+    return `<div class="guest-directory-row"><div><strong>${escapeHtml(booking.cabinName)} · ${escapeHtml(booking.name)}</strong><small>${booking.guests} guest${booking.guests === 1 ? "" : "s"} · ${escapeHtml(booking.phone)} · ${formatBookingWhen(booking.datetime)}${sourceTag}</small>${reasonLine}</div><span>${statusLabel}${actions}</span></div>`;
   };
   const upcoming = bookings.filter(booking => !booking.cancelled && new Date(booking.datetime).getTime() >= now).sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
   const past = bookings.filter(booking => booking.cancelled || new Date(booking.datetime).getTime() < now).sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
@@ -2035,6 +2037,33 @@ async function pullResetRequestsIfSuperAdmin() {
   }
 }
 
+// Bookings need the same live pull as reset requests, for the same reason:
+// a guest booking a cabin on the public site (or another device confirming
+// one) has to show up in Booking Management on an already-open session,
+// not just the next time this device's localStorage happens to be empty.
+async function pullBookingsLive() {
+  try {
+    const resp = await fetch("/api/sync/d1", { credentials: "same-origin" });
+    if (!resp.ok) return;
+    const result = await resp.json();
+    const remoteRaw = result?.data?.["alyazi-bookings-v1"];
+    if (!remoteRaw) return;
+    const remoteBookings = JSON.parse(remoteRaw);
+    const local = getBookings();
+    const localIds = new Set(local.map(booking => booking.id));
+    const fresh = remoteBookings.filter(booking => !localIds.has(booking.id));
+    if (fresh.length) {
+      saveBookings([...local, ...fresh]);
+      renderBookingsList();
+      renderCabinTabs();
+      const webBookings = fresh.filter(booking => booking.source === "web");
+      if (webBookings.length) showToast(`${webBookings.length} new web booking${webBookings.length === 1 ? "" : "s"} received`);
+    }
+  } catch (err) {
+    // best effort — next sync cycle will retry
+  }
+}
+
 async function runSync({ manual = false } = {}) {
   if (syncInFlight) return;
   const snapshot = collectSyncSnapshot();
@@ -2057,6 +2086,7 @@ async function runSync({ manual = false } = {}) {
       cloudOk = false;
     }
     await pullResetRequestsIfSuperAdmin();
+    await pullBookingsLive();
 
     if (syncStatus) {
       syncStatus.textContent = cloudOk

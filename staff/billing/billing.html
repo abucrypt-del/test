@@ -327,13 +327,17 @@
         if (!resp || !resp.ok || !resp.data) return;
         Object.keys(resp.data).forEach(function(key) {
           if (resp.data[key] == null) return;
-          if (key === "alyazi-users-v1") {
-            var remoteUsers = JSON.parse(resp.data[key]);
-            var localUsers = JSON.parse(localStorage.getItem(key) || "[]");
+          if (key === "alyazi-users-v1" || key === "alyazi-bookings-v1") {
+            // Merge-by-id, not fill-when-empty: a booking from a guest on
+            // the public site (or a user created on another device) needs
+            // to show up here even on a device that already has its own
+            // (smaller) local list — not just on a brand-new empty browser.
+            var remoteList = JSON.parse(resp.data[key]);
+            var localList = JSON.parse(localStorage.getItem(key) || "[]");
             var localIds = {};
-            localUsers.forEach(function(u) { localIds[u.id] = true; });
-            var fresh = remoteUsers.filter(function(u) { return !localIds[u.id]; });
-            if (fresh.length) localStorage.setItem(key, JSON.stringify(localUsers.concat(fresh)));
+            localList.forEach(function(item) { localIds[item.id] = true; });
+            var fresh = remoteList.filter(function(item) { return !localIds[item.id]; });
+            if (fresh.length) localStorage.setItem(key, JSON.stringify(localList.concat(fresh)));
             return;
           }
           if (localStorage.getItem(key) == null) localStorage.setItem(key, resp.data[key]);

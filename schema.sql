@@ -105,3 +105,15 @@ CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
 CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);
 CREATE INDEX IF NOT EXISTS idx_bookings_datetime ON bookings(datetime);
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
+
+-- Distinguishes bookings a guest made themselves on the public site from
+-- ones staff entered in-app. Errors harmlessly on redeploys where this
+-- column already exists (the deploy step that runs this file tolerates
+-- failure by design — see .github/workflows/pages-deploy.yml).
+ALTER TABLE bookings ADD COLUMN source TEXT NOT NULL DEFAULT 'staff';
+
+-- Enforces "one active booking per cabin per slot" at the data layer, not
+-- just in application code — two simultaneous requests for the same
+-- cabin+datetime can't both insert; the second hits this constraint.
+-- Partial (WHERE cancelled = 0) so a cancelled booking frees the slot.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_cabin_slot ON bookings(cabin_legacy_id, datetime) WHERE cancelled = 0;

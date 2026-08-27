@@ -60,19 +60,19 @@ async function upsertBookings(db, snapshot) {
     const customerId = await upsertCustomer(db, booking.name, booking.phone);
     await db.prepare(
       `INSERT INTO bookings (legacy_id, customer_id, cabin_legacy_id, cabin_name, guest_name, phone, guests,
-         datetime, confirmed, cancelled, notified_hour, notified_half_hour, cancel_reason, updated_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, datetime('now'))
+         datetime, confirmed, cancelled, notified_hour, notified_half_hour, cancel_reason, source, updated_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, datetime('now'))
        ON CONFLICT(legacy_id) DO UPDATE SET
          customer_id = excluded.customer_id, cabin_legacy_id = excluded.cabin_legacy_id,
          cabin_name = excluded.cabin_name, guest_name = excluded.guest_name, phone = excluded.phone,
          guests = excluded.guests, datetime = excluded.datetime, confirmed = excluded.confirmed,
          cancelled = excluded.cancelled, notified_hour = excluded.notified_hour,
          notified_half_hour = excluded.notified_half_hour, cancel_reason = excluded.cancel_reason,
-         updated_at = datetime('now')`
+         source = excluded.source, updated_at = datetime('now')`
     ).bind(booking.id, customerId, booking.cabinId ?? null, booking.cabinName ?? "", booking.name ?? "",
       booking.phone ?? "", booking.guests ?? null, booking.datetime ?? "", booking.confirmed ? 1 : 0,
       booking.cancelled ? 1 : 0, booking.notifiedHour ? 1 : 0, booking.notifiedHalfHour ? 1 : 0,
-      booking.cancelReason ?? null).run();
+      booking.cancelReason ?? null, booking.source === "web" ? "web" : "staff").run();
   }
 }
 
@@ -170,7 +170,7 @@ export async function onRequestGet({ request, env }) {
     id: row.legacy_id, cabinId: row.cabin_legacy_id, cabinName: row.cabin_name, name: row.guest_name,
     phone: row.phone, guests: row.guests, datetime: row.datetime, confirmed: !!row.confirmed,
     cancelled: !!row.cancelled, notifiedHour: !!row.notified_hour, notifiedHalfHour: !!row.notified_half_hour,
-    cancelReason: row.cancel_reason || undefined,
+    cancelReason: row.cancel_reason || undefined, source: row.source || "staff",
   }));
 
   const saleRows = await db.prepare("SELECT * FROM sales ORDER BY id").all();
