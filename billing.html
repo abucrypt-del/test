@@ -301,10 +301,13 @@
   <div class="toast" id="toast" role="status"></div>
   <script>
     // Hydrate an empty browser (new device, cleared storage) from the D1
-    // cloud copy before app.js's synchronous localStorage reads run. Only
-    // fills in keys that are missing locally — never overwrites an existing
-    // session's not-yet-synced edits. Synchronous XHR is intentional here:
-    // it must finish before the next <script> tag executes.
+    // cloud copy before app.js's synchronous localStorage reads run. Most
+    // keys only fill in when missing locally — never overwriting an
+    // existing session's not-yet-synced edits. Users are the exception:
+    // an account created on another device needs to show up here even
+    // though this device already has its own (smaller) local user list,
+    // so that key is merged by id instead of skipped. Synchronous XHR is
+    // intentional here: it must finish before the next <script> tag runs.
     (function hydrateFromCloud() {
       try {
         var xhr = new XMLHttpRequest();
@@ -314,9 +317,17 @@
         var resp = JSON.parse(xhr.responseText);
         if (!resp || !resp.ok || !resp.data) return;
         Object.keys(resp.data).forEach(function(key) {
-          if (resp.data[key] != null && localStorage.getItem(key) == null) {
-            localStorage.setItem(key, resp.data[key]);
+          if (resp.data[key] == null) return;
+          if (key === "alyazi-users-v1") {
+            var remoteUsers = JSON.parse(resp.data[key]);
+            var localUsers = JSON.parse(localStorage.getItem(key) || "[]");
+            var localIds = {};
+            localUsers.forEach(function(u) { localIds[u.id] = true; });
+            var fresh = remoteUsers.filter(function(u) { return !localIds[u.id]; });
+            if (fresh.length) localStorage.setItem(key, JSON.stringify(localUsers.concat(fresh)));
+            return;
           }
+          if (localStorage.getItem(key) == null) localStorage.setItem(key, resp.data[key]);
         });
       } catch (err) {
         // Cloud unreachable — proceed with whatever's cached locally.

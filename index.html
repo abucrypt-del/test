@@ -192,9 +192,34 @@
     document.getElementById("login-form").addEventListener("submit", async function(e) {
       e.preventDefault();
       const typedName = usernameInput.value.trim().toLowerCase();
-      const user = users.find(u => u.name.trim().toLowerCase() === typedName);
+      let user = users.find(u => u.name.trim().toLowerCase() === typedName);
       const password = document.getElementById("login-password").value;
       const errorEl = document.getElementById("login-error");
+
+      // This device may never have loaded the account that was just
+      // created on someone else's — pull the cloud's user list and merge
+      // in anything missing locally before giving up on a match.
+      if (!user) {
+        try {
+          const resp = await fetch("/api/sync/d1");
+          if (resp.ok) {
+            const result = await resp.json();
+            const remoteRaw = result?.data?.["alyazi-users-v1"];
+            if (remoteRaw) {
+              const remoteUsers = JSON.parse(remoteRaw);
+              const localIds = new Set(users.map(u => u.id));
+              const fresh = remoteUsers.filter(u => !localIds.has(u.id));
+              if (fresh.length) {
+                users = users.concat(fresh);
+                localStorage.setItem("alyazi-users-v1", JSON.stringify(users));
+              }
+            }
+          }
+        } catch (err) {
+          // Offline or cloud unreachable — fall back to whatever's cached.
+        }
+        user = users.find(u => u.name.trim().toLowerCase() === typedName);
+      }
 
       if (!user) {
         errorEl.textContent = "Incorrect username or password. Please try again.";
