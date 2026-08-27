@@ -100,6 +100,22 @@ async function upsertSales(db, snapshot) {
   }
 }
 
+async function upsertUsers(db, snapshot) {
+  const users = safeParse(snapshot["alyazi-users-v1"]);
+  if (!Array.isArray(users)) return;
+  const stmts = users
+    .filter(user => user && user.id && user.name)
+    .map(user => db.prepare(
+      `INSERT INTO users (legacy_id, name, email, phone, role, password, locked, updated_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'))
+       ON CONFLICT(legacy_id) DO UPDATE SET
+         name = excluded.name, email = excluded.email, phone = excluded.phone, role = excluded.role,
+         password = excluded.password, locked = excluded.locked, updated_at = datetime('now')`
+    ).bind(user.id, user.name, user.email ?? "", user.phone ?? "", user.role ?? "User",
+      user.password ?? null, user.locked ? 1 : 0));
+  if (stmts.length) await db.batch(stmts);
+}
+
 async function upsertResetRequests(db, snapshot) {
   const requests = safeParse(snapshot["alyazi-password-reset-requests"]);
   if (!Array.isArray(requests)) return;
@@ -125,6 +141,7 @@ export async function onRequestPost({ request, env }) {
   await upsertCategories(db, body.data);
   await upsertBookings(db, body.data);
   await upsertSales(db, body.data);
+  await upsertUsers(db, body.data);
   await upsertResetRequests(db, body.data);
   return json({ ok: true, updatedAt: Date.now() });
 }
@@ -171,6 +188,12 @@ export async function onRequestGet({ env }) {
     });
   }
 
+  const userRows = await db.prepare("SELECT * FROM users ORDER BY id").all();
+  const users = userRows.results.map(row => ({
+    id: row.legacy_id, name: row.name, email: row.email || "", phone: row.phone || "",
+    role: row.role, password: row.password || undefined, locked: !!row.locked,
+  }));
+
   const resetRequestRows = await db.prepare("SELECT * FROM password_reset_requests ORDER BY id").all();
   const resetRequests = resetRequestRows.results.map(row => ({
     id: row.legacy_id, userId: row.user_id, userName: row.user_name, role: row.role, requestedAt: row.requested_at,
@@ -188,6 +211,7 @@ export async function onRequestGet({ env }) {
       "alyazi-categories-v1": orNull(categories),
       "alyazi-bookings-v1": orNull(bookings),
       "alyazi-sales-v1": orNull(sales),
+      "alyazi-users-v1": orNull(users),
       "alyazi-password-reset-requests": orNull(resetRequests),
     },
   });

@@ -1,8 +1,21 @@
 -- Core relational data for Al Yazi Mandi billing: menu items, customers,
--- bookings, and sales/invoices. Everything else (live cabin ticket state,
--- KOTs, printers, role permissions, small settings blobs) stays on the
--- localStorage + IndexedDB + AUTH_KV sync already in place, since that's
--- fast-changing operational state rather than reporting/relational data.
+-- bookings, sales/invoices, and staff accounts. Everything else (live cabin
+-- ticket state, KOTs, printers, role permissions, small settings blobs)
+-- stays on the localStorage + IndexedDB + AUTH_KV sync already in place,
+-- since that's fast-changing operational state rather than reporting/
+-- relational data.
+
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  legacy_id INTEGER UNIQUE,
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  role TEXT NOT NULL,
+  password TEXT,
+  locked INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 
 CREATE TABLE IF NOT EXISTS menu_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
