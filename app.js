@@ -538,6 +538,7 @@ const MANAGED_SETTINGS_PAGES = [
     ] },
   { key: "sales", label: "Sales reports", actions: [
       { key: "export", label: "Export Excel" },
+      { key: "staff-performance", label: "Staff performance" },
     ] },
   { key: "receipts", label: "Receipt History", actions: [
       { key: "reprint", label: "Reprint receipts" },
@@ -793,19 +794,24 @@ function renderSales(range = "day", fromDate = "", toDate = "") {
   document.querySelector("#report-total").textContent = money(total);
   document.querySelector("#report-orders").textContent = filtered.length;
   document.querySelector("#report-average").textContent = money(filtered.length ? total / filtered.length : 0);
-  const staffTotals = new Map();
-  filtered.forEach(sale => {
-    const name = sale.user || "Unknown";
-    const current = staffTotals.get(name) || { orders: 0, total: 0 };
-    staffTotals.set(name, { orders: current.orders + 1, total: current.total + sale.total });
-  });
-  const rankedStaff = [...staffTotals.entries()].sort((first, second) => second[1].total - first[1].total);
+  const staffPerformanceHeading = document.querySelector("#staff-performance-heading");
   const staffPerformance = document.querySelector("#staff-performance");
-  if (!rankedStaff.length) {
-    staffPerformance.innerHTML = `<div class="best-sellers-empty">Complete a payment to see staff performance.</div>`;
-  } else {
-    const highestStaffTotal = rankedStaff[0][1].total;
-    staffPerformance.innerHTML = rankedStaff.map(([name, stats], index) => `<div class="best-seller-row"><span class="rank">${index + 1}</span><div class="best-seller-info"><strong>${name}</strong><div class="rank-bar"><i style="width:${stats.total / highestStaffTotal * 100}%"></i></div></div><span class="sold-count">${stats.orders} order${stats.orders === 1 ? "" : "s"}</span><strong class="sold-revenue">${money(stats.total)}</strong></div>`).join("");
+  const canViewStaffPerformance = hasSettingsActionAccess(currentUser.role, "sales", "staff-performance");
+  staffPerformanceHeading.hidden = staffPerformance.hidden = !canViewStaffPerformance;
+  if (canViewStaffPerformance) {
+    const staffTotals = new Map();
+    filtered.forEach(sale => {
+      const name = sale.user || "Unknown";
+      const current = staffTotals.get(name) || { orders: 0, total: 0 };
+      staffTotals.set(name, { orders: current.orders + 1, total: current.total + sale.total });
+    });
+    const rankedStaff = [...staffTotals.entries()].sort((first, second) => second[1].total - first[1].total);
+    if (!rankedStaff.length) {
+      staffPerformance.innerHTML = `<div class="best-sellers-empty">Complete a payment to see staff performance.</div>`;
+    } else {
+      const highestStaffTotal = rankedStaff[0][1].total;
+      staffPerformance.innerHTML = rankedStaff.map(([name, stats], index) => `<div class="best-seller-row"><span class="rank">${index + 1}</span><div class="best-seller-info"><strong>${name}</strong><div class="rank-bar"><i style="width:${stats.total / highestStaffTotal * 100}%"></i></div></div><span class="sold-count">${stats.orders} order${stats.orders === 1 ? "" : "s"}</span><strong class="sold-revenue">${money(stats.total)}</strong></div>`).join("");
+    }
   }
   const bucketCount = range === "day" ? 1 : range === "week" ? 7 : range === "month" ? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() : 1;
   const buckets = Array.from({ length: bucketCount }, (_, index) => {
