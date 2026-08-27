@@ -10,10 +10,19 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Pirata+One&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=19" />
   <script>
-    // Auth guard: redirect to login page if not authenticated
+    // Server session is authoritative. sessionStorage only carries display
+    // metadata for this device and is never an access control — a forged
+    // sessionStorage entry (e.g. via devtools) no longer grants access,
+    // since every load re-validates against the HttpOnly signed cookie.
     (function() {
-      const user = sessionStorage.getItem("alyazi-current-user");
-      if (!user) { window.location.replace("/"); }
+      try {
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", "/api/auth/session", false);
+        xhr.send(null);
+        if (xhr.status !== 200) window.location.replace("/");
+      } catch {
+        window.location.replace("/");
+      }
     })();
   </script>
 </head>

@@ -62,16 +62,18 @@ printSettings.whatsapp = printSettings.whatsapp || "";
 printSettings.headerAlign = printSettings.headerAlign || "center";
 printSettings.paperSize = printSettings.paperSize || "80mm";
 printSettings.footerAlign = printSettings.footerAlign || "center";
-let users = JSON.parse(localStorage.getItem("alyazi-users-v1") || "null") || [{ id: 1, name: "abu", email: "owner@alyazi.com", phone: "", role: "Super Admin", password: "admin123" }];
+printSettings.taxRatePercent = typeof printSettings.taxRatePercent === "number" ? printSettings.taxRatePercent : 8.25;
+let users = JSON.parse(localStorage.getItem("alyazi-users-v1") || "null") || [];
 users = users.map(user => ({
   ...user,
-  password: user.password || "admin123",
+  password: undefined,
   // One-time migration for browsers that cached the users list before the
   // Super Admin was renamed to "abu".
   name: user.id === 1 && user.email === "owner@alyazi.com" ? "abu" : user.name,
 }));
 localStorage.setItem("alyazi-users-v1", JSON.stringify(users));
-// Restore session or redirect to login
+// Restore session or redirect to login. Server session is authoritative —
+// sessionStorage only carries display metadata for this device.
 let currentUser = (function() {
   const stored = sessionStorage.getItem("alyazi-current-user");
   if (!stored) { window.location.replace("/"); return null; }
@@ -697,6 +699,7 @@ function loadPrintSettings() {
   document.querySelector("#print-show-logo").checked = printSettings.showLogo;
   document.querySelector("#print-show-tax").checked = printSettings.showTax;
   document.querySelector("#print-show-order-type").checked = printSettings.showOrderType;
+  document.querySelector("#print-tax-rate").value = printSettings.taxRatePercent;
 }
 
 function buildReceiptPreviewHtml(headerAlign, footerAlign) {
@@ -913,11 +916,12 @@ function renderOrder() {
   const subtotal = [...order.values()].reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = Math.min(discountType === "amount" ? discountValue : subtotal * (discountValue / 100), subtotal);
   const taxableAmount = subtotal - discountAmount;
-  const tax = taxableAmount * .0825;
+  const tax = taxableAmount * (printSettings.taxRatePercent / 100);
   const total = taxableAmount + tax;
   document.querySelector("#subtotal").textContent = money(subtotal);
   document.querySelector("#discount-amount-row").hidden = discountAmount <= 0;
   document.querySelector("#discount-amount").textContent = `-${money(discountAmount)}`;
+  document.querySelector("#tax-rate-label").textContent = `(${printSettings.taxRatePercent}%)`;
   document.querySelector("#tax").textContent = money(tax);
   document.querySelector("#total").textContent = money(total);
   document.querySelector("#charge-total").textContent = money(total);
@@ -1000,7 +1004,7 @@ function renderPrintSheet(type, isReprint = false, itemsOverride = null) {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = type === "bill" ? Math.min(discountType === "amount" ? discountValue : subtotal * (discountValue / 100), subtotal) : 0;
   const taxableAmount = subtotal - discountAmount;
-  const tax = taxableAmount * .0825;
+  const tax = taxableAmount * (printSettings.taxRatePercent / 100);
   const total = taxableAmount + tax;
   const safe = value => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const guestInfo = currentOrderGuestName || currentOrderGuestPhone ? `<div class="print-line"><span>Guest</span><span>${safe(currentOrderGuestName)}${currentOrderGuestPhone ? ` ${safe(currentOrderGuestPhone)}` : ""}</span></div>` : "";
@@ -1019,7 +1023,7 @@ function renderPrintSheet(type, isReprint = false, itemsOverride = null) {
   }
   const orderTypeLine = printSettings.showOrderType ? `<div class="print-line"><span>Order type</span><span>${safe(orderMode)}</span></div>` : "";
   const dateLine = `<div class="print-line"><span>Date</span><span>${new Date().toLocaleString()}</span></div>`;
-  const html = `<div style="text-align:${printSettings.headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}${printSettings.address ? `<p>${safe(printSettings.address)}</p>` : ""}${printSettings.phone ? `<p>Ph: ${safe(printSettings.phone)}</p>` : ""}${printSettings.whatsapp ? `<p>WhatsApp: ${safe(printSettings.whatsapp)}</p>` : ""}</div><hr><div style="text-align:center"><h2>${type === "KOT" ? (itemsOverride ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT") : "RECEIPT"}</h2>${receiptType ? `<p style="font-weight:bold;">${receiptType}</p>` : ""}</div>${guestInfo}${orderTypeLine}${locationLine}${orderNumberLine}${dateLine}<hr>${items.map(item => `<div class="print-line"><span>${item.quantity} x ${safe(item.name)}</span><strong>${money(item.price * item.quantity)}</strong></div>`).join("")}${type === "KOT" ? "" : `<hr><div class="print-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>${discountAmount > 0 ? `<div class="print-line"><span>Discount</span><strong>-${money(discountAmount)}</strong></div>` : ""}${printSettings.showTax ? `<div class="print-line"><span>Tax (8.25%)</span><strong>${money(tax)}</strong></div>` : ""}<div class="print-line print-total"><span>Total</span><strong>${money(total)}</strong></div>`}${printSettings.footer ? `<hr><div style="text-align:${printSettings.footerAlign}"><p>${safe(printSettings.footer)}</p></div>` : ""}`;
+  const html = `<div style="text-align:${printSettings.headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}${printSettings.address ? `<p>${safe(printSettings.address)}</p>` : ""}${printSettings.phone ? `<p>Ph: ${safe(printSettings.phone)}</p>` : ""}${printSettings.whatsapp ? `<p>WhatsApp: ${safe(printSettings.whatsapp)}</p>` : ""}</div><hr><div style="text-align:center"><h2>${type === "KOT" ? (itemsOverride ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT") : "RECEIPT"}</h2>${receiptType ? `<p style="font-weight:bold;">${receiptType}</p>` : ""}</div>${guestInfo}${orderTypeLine}${locationLine}${orderNumberLine}${dateLine}<hr>${items.map(item => `<div class="print-line"><span>${item.quantity} x ${safe(item.name)}</span><strong>${money(item.price * item.quantity)}</strong></div>`).join("")}${type === "KOT" ? "" : `<hr><div class="print-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>${discountAmount > 0 ? `<div class="print-line"><span>Discount</span><strong>-${money(discountAmount)}</strong></div>` : ""}${printSettings.showTax ? `<div class="print-line"><span>Tax (${printSettings.taxRatePercent}%)</span><strong>${money(tax)}</strong></div>` : ""}<div class="print-line print-total"><span>Total</span><strong>${money(total)}</strong></div>`}${printSettings.footer ? `<hr><div style="text-align:${printSettings.footerAlign}"><p>${safe(printSettings.footer)}</p></div>` : ""}`;
   document.querySelector("#print-sheet").innerHTML = html;
   if (type === "bill" && !isReprint) {
     printedBills.push({ html: html.replace("--- ORIGINAL ---", "--- COPY ---"), createdAt: new Date().toISOString(), guest: currentOrderGuestName, phone: currentOrderGuestPhone, total, originalHtml: html });
@@ -1511,11 +1515,14 @@ document.querySelector("#export-receipts").addEventListener("click", () => {
   const blob = new Blob([`<html><head><meta charset="UTF-8"></head><body>${table}</body></html>`], { type: "application/vnd.ms-excel" });
   const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `alyazi-receipts-${new Date().toISOString().slice(0, 10)}.xls`; link.click(); URL.revokeObjectURL(link.href); showToast("Receipt history exported to Excel");
 });
-document.querySelector("#user-form").addEventListener("submit", event => {
+document.querySelector("#user-form").addEventListener("submit", async event => {
   event.preventDefault();
   if (!hasSettingsActionAccess(currentUser.role, "users", "create")) { showToast("You don't have permission to create accounts"); return; }
-  users.push({ id: Date.now(), name: document.querySelector("#new-user-name").value.trim(), email: document.querySelector("#new-user-email").value.trim(), phone: document.querySelector("#new-user-phone").value.trim(), role: document.querySelector("#new-user-role").value, password: document.querySelector("#new-user-password").value, locked: false });
-  saveUsers(); event.target.reset(); showToast("User account created");
+  const newUser = { name: document.querySelector("#new-user-name").value.trim(), email: document.querySelector("#new-user-email").value.trim(), phone: document.querySelector("#new-user-phone").value.trim(), role: document.querySelector("#new-user-role").value, password: document.querySelector("#new-user-password").value };
+  const response = await fetch("/api/users", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify(newUser) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) { showToast(data.error === "name_taken" ? "That username is already in use" : "Couldn't create the account"); return; }
+  users.push(data.user); saveUsers(); event.target.reset(); showToast("User account created");
 });
 document.querySelector("#user-table-body").addEventListener("click", event => {
   if (event.target.dataset.toggleLock) {
@@ -1523,7 +1530,10 @@ document.querySelector("#user-table-body").addEventListener("click", event => {
     const user = users.find(item => item.id === Number(event.target.dataset.toggleLock));
     if (user && user.role !== "Super Admin") {
       user.locked = !user.locked;
-      saveUsers();
+      fetch(`/api/users/${user.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ locked: user.locked }) }).then(response => {
+        if (!response.ok) { user.locked = !user.locked; showToast("Couldn't update the account"); return; }
+        saveUsers();
+      }).catch(() => { user.locked = !user.locked; showToast("Couldn't reach the staff server"); });
       renderLoginUsers();
       showToast(`${user.name} ${user.locked ? "locked — they can no longer sign in" : "unlocked"}`);
     }
@@ -1531,10 +1541,14 @@ document.querySelector("#user-table-body").addEventListener("click", event => {
   }
   if (!event.target.dataset.deleteUser) return;
   if (!hasSettingsActionAccess(currentUser.role, "users", "delete")) { showToast("You don't have permission to delete accounts"); return; }
-  users = users.filter(user => user.id !== Number(event.target.dataset.deleteUser)); saveUsers(); showToast("User account removed");
+  const userId = Number(event.target.dataset.deleteUser);
+  fetch(`/api/users/${userId}`, { method: "DELETE", credentials: "same-origin" }).then(response => {
+    if (!response.ok) { showToast("Couldn't remove that account"); return; }
+    users = users.filter(user => user.id !== userId); saveUsers(); showToast("User account removed");
+  }).catch(() => showToast("Couldn't reach the staff server"));
 });
 document.querySelector("#printer-form").addEventListener("submit", event => { event.preventDefault(); if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-printer")) { showToast("You don't have permission to edit printer settings"); return; } localStorage.setItem("alyazi-printers", JSON.stringify({ network: { name: document.querySelector("#network-name").value, ip: document.querySelector("#network-ip").value, port: document.querySelector("#network-port").value, enabled: document.querySelector("#network-enabled").checked }, wired: { name: document.querySelector("#wired-name").value, device: document.querySelector("#wired-device").value, enabled: document.querySelector("#wired-enabled").checked } })); showToast("Printer settings saved"); });
-document.querySelector("#print-settings-form").addEventListener("submit", event => { event.preventDefault(); if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-printer")) { showToast("You don't have permission to edit printer settings"); return; } printSettings = { ...printSettings, phone: document.querySelector("#print-phone").value.trim(), whatsapp: document.querySelector("#print-whatsapp").value.trim(), address: document.querySelector("#print-address").value.trim(), footer: document.querySelector("#print-footer").value.trim(), showLogo: document.querySelector("#print-show-logo").checked, showTax: document.querySelector("#print-show-tax").checked, showOrderType: document.querySelector("#print-show-order-type").checked }; localStorage.setItem("alyazi-print-settings-v1", JSON.stringify(printSettings)); showToast("Print settings saved"); });
+document.querySelector("#print-settings-form").addEventListener("submit", event => { event.preventDefault(); if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-printer")) { showToast("You don't have permission to edit printer settings"); return; } printSettings = { ...printSettings, phone: document.querySelector("#print-phone").value.trim(), whatsapp: document.querySelector("#print-whatsapp").value.trim(), address: document.querySelector("#print-address").value.trim(), footer: document.querySelector("#print-footer").value.trim(), showLogo: document.querySelector("#print-show-logo").checked, showTax: document.querySelector("#print-show-tax").checked, showOrderType: document.querySelector("#print-show-order-type").checked, taxRatePercent: Math.max(0, Number(document.querySelector("#print-tax-rate").value) || 0) }; localStorage.setItem("alyazi-print-settings-v1", JSON.stringify(printSettings)); renderOrder(); showToast("Print settings saved"); });
 document.querySelector("#save-integrations").addEventListener("click", () => { if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-workflow")) { showToast("You don't have permission to edit workflow settings"); return; } localStorage.setItem("alyazi-integrations", JSON.stringify({ kitchenWhatsapp: document.querySelector("#kitchen-whatsapp").value, billingWhatsapp: document.querySelector("#billing-whatsapp").value, kitchenDisplayUrl: document.querySelector("#kitchen-display-url").value })); showToast("Workflow settings saved"); });
 document.querySelector("#upi-account-form").addEventListener("submit", event => { event.preventDefault(); if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-upi")) { showToast("You don't have permission to edit UPI settings"); return; } const account = { id: Date.now(), name: document.querySelector("#new-upi-name").value.trim(), bank: document.querySelector("#new-upi-bank").value.trim(), upiId: document.querySelector("#new-upi-id").value.trim(), enabled: true }; upiAccounts.push(account); selectedUpiId = account.id; saveUpiAccounts(); event.target.reset(); showToast(`${account.name} linked`); });
 document.querySelector("#upi-accounts-list").addEventListener("change", event => { if (!event.target.dataset.upiToggle) return; if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-upi")) { showToast("You don't have permission to edit UPI settings"); renderUpiAccounts(); return; } const account = upiAccounts.find(item => item.id === Number(event.target.dataset.upiToggle)); account.enabled = event.target.checked; saveUpiAccounts(); });
@@ -1608,34 +1622,33 @@ const accountMenu = document.querySelector("#account-menu");
 const loginModal = document.querySelector("#login-modal");
 const changePasswordModal = document.querySelector("#change-password-modal");
 document.querySelector("#profile-button").addEventListener("click", () => { accountMenu.hidden = !accountMenu.hidden; document.querySelector("#notifications-panel").hidden = true; });
-document.querySelector("#logout-button").addEventListener("click", () => { accountMenu.hidden = true; sessionStorage.removeItem("alyazi-current-user"); window.location.replace("/"); });
+document.querySelector("#logout-button").addEventListener("click", async () => { accountMenu.hidden = true; await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {}); sessionStorage.removeItem("alyazi-current-user"); window.location.replace("/"); });
 document.querySelector("#switch-user").addEventListener("click", () => { accountMenu.hidden = true; renderLoginUsers(); loginModal.hidden = false; });
 document.querySelector("#change-password-btn").addEventListener("click", () => { accountMenu.hidden = true; changePasswordModal.hidden = false; document.querySelector("#current-password").value = ""; document.querySelector("#new-password").value = ""; document.querySelector("#confirm-password").value = ""; document.querySelector("#password-change-error").textContent = ""; });
 document.querySelector("#close-change-password").addEventListener("click", () => { changePasswordModal.hidden = true; });
-document.querySelector("#change-password-form").addEventListener("submit", event => {
+document.querySelector("#change-password-form").addEventListener("submit", async event => {
   event.preventDefault();
   const currentPassword = document.querySelector("#current-password").value;
   const newPassword = document.querySelector("#new-password").value;
   const confirmPassword = document.querySelector("#confirm-password").value;
   const errorElement = document.querySelector("#password-change-error");
-  if (currentUser.password !== currentPassword) { errorElement.textContent = "Current password is incorrect."; return; }
   if (newPassword.length < 6) { errorElement.textContent = "New password must be at least 6 characters."; return; }
   if (newPassword !== confirmPassword) { errorElement.textContent = "Passwords do not match."; return; }
-  currentUser.password = newPassword;
-  const userIndex = users.findIndex(u => u.id === currentUser.id);
-  if (userIndex !== -1) users[userIndex].password = newPassword;
-  localStorage.setItem("alyazi-users-v1", JSON.stringify(users));
-  sessionStorage.setItem("alyazi-current-user", JSON.stringify(currentUser));
+  const response = await fetch("/api/auth/change-password", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ currentPassword, newPassword }) });
+  if (!response.ok) { errorElement.textContent = "Current password is incorrect."; return; }
   changePasswordModal.hidden = true;
   showToast("Password updated successfully");
 });
-document.querySelector("#login-form").addEventListener("submit", event => {
+document.querySelector("#login-form").addEventListener("submit", async event => {
   event.preventDefault();
   const user = users.find(item => item.id === Number(document.querySelector("#login-user").value));
   const password = document.querySelector("#login-password").value;
   if (user && user.locked) { document.querySelector("#login-error").textContent = "This account has been locked. Contact your Super Admin."; return; }
-  if (!user || user.password !== password) { document.querySelector("#login-error").textContent = "Incorrect password. Please try again."; return; }
-  currentUser = user; sessionStorage.setItem("alyazi-current-user", JSON.stringify(currentUser)); updateSession(); loginModal.hidden = true; document.querySelector("#login-error").textContent = ""; document.querySelector("#login-password").value = ""; showToast(`Welcome, ${user.name}`);
+  if (!user) { document.querySelector("#login-error").textContent = "Choose an active staff account."; return; }
+  const response = await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ username: user.name, password }) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) { document.querySelector("#login-error").textContent = "Incorrect password. Please try again."; return; }
+  currentUser = data.user; sessionStorage.setItem("alyazi-current-user", JSON.stringify(currentUser)); updateSession(); loginModal.hidden = true; document.querySelector("#login-error").textContent = ""; document.querySelector("#login-password").value = ""; showToast(`Welcome, ${currentUser.name}`);
 });
 
 const notificationsPanel = document.querySelector("#notifications-panel");
@@ -1654,11 +1667,12 @@ document.querySelector("#reset-requests-list").addEventListener("click", event =
     submitEvent.preventDefault();
     const newPassword = row.querySelector(".reset-new-password").value;
     const user = users.find(u => u.id === userId);
-    if (user) { user.password = newPassword; saveUsers(); }
-    saveResetRequests(getResetRequests().filter(r => r.id !== requestId));
-    fetch(`/api/sync/d1?id=${requestId}`, { method: "DELETE" }).catch(() => {});
-    showToast(`Password reset for ${user ? user.name : "user"}`);
-    renderResetRequests();
+    fetch("/api/auth/reset-user-password", { method: "POST", headers: { "content-type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ userId, requestId, newPassword }) }).then(response => {
+      if (!response.ok) { showToast("Couldn't reset that password"); return; }
+      saveResetRequests(getResetRequests().filter(r => r.id !== requestId));
+      showToast(`Password reset for ${user ? user.name : "user"}`);
+      renderResetRequests();
+    }).catch(() => showToast("Couldn't reach the staff server"));
   });
 });
 
@@ -1986,6 +2000,7 @@ async function saveSnapshotToCloud(data, updatedAt) {
   const resp = await fetch("/api/sync/d1", {
     method: "POST",
     headers: { "content-type": "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify({ data, updatedAt }),
   });
   if (!resp.ok) throw new Error("cloud sync failed");
@@ -2002,7 +2017,7 @@ function formatSyncTime(ts) {
 async function pullResetRequestsIfSuperAdmin() {
   if (currentUser.role !== "Super Admin") return;
   try {
-    const resp = await fetch("/api/sync/d1");
+    const resp = await fetch("/api/sync/d1", { credentials: "same-origin" });
     if (!resp.ok) return;
     const result = await resp.json();
     const remoteRaw = result?.data?.["alyazi-password-reset-requests"];

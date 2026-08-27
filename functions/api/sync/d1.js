@@ -1,4 +1,5 @@
 import { json } from "../../_shared/http.js";
+import { requireSession } from "../../_shared/session.js";
 
 // Mirrors the billing app's core relational data (menu items, bookings,
 // customers, sales/invoices) into D1. POST upserts everything found in the
@@ -100,27 +101,11 @@ async function upsertSales(db, snapshot) {
   }
 }
 
-async function upsertUsers(db, snapshot) {
-  const users = safeParse(snapshot["alyazi-users-v1"]);
-  if (!Array.isArray(users)) return;
-  const stmts = users
-    .filter(user => user && user.id && user.name)
-    .map(user => db.prepare(
-      `INSERT INTO users (legacy_id, name, email, phone, role, password, locked, updated_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'))
-       ON CONFLICT(legacy_id) DO UPDATE SET
-         name = excluded.name, email = excluded.email, phone = excluded.phone, role = excluded.role,
-         password = excluded.password, locked = excluded.locked, updated_at = datetime('now')`
-    ).bind(user.id, user.name, user.email ?? "", user.phone ?? "", user.role ?? "User",
-      user.password ?? null, user.locked ? 1 : 0));
-  if (!stmts.length) return;
-  try {
-    await db.batch(stmts);
-  } catch (err) {
-    // The users table may not be migrated on this environment yet — don't
-    // let that take down the rest of the sync (menu/bookings/sales/etc).
-  }
-}
+// Staff accounts are intentionally NOT written through this generic sync
+// path anymore — user creation/lock/delete/password changes all go through
+// the dedicated /api/users* and /api/auth/* endpoints, which hash passwords
+// server-side. Accepting a client-supplied "alyazi-users-v1" blob here would
+// let plaintext passwords back in through the side door.
 
 async function upsertResetRequests(db, snapshot) {
   const requests = safeParse(snapshot["alyazi-password-reset-requests"]);
@@ -137,6 +122,8 @@ async function upsertResetRequests(db, snapshot) {
 }
 
 export async function onRequestPost({ request, env }) {
+  const staff = await requireSession(request, env);
+  if (!staff) return json({ ok: false, error: "unauthorized" }, 401);
   if (!env.BILLING_DB) return json({ ok: false, error: "not_configured" }, 500);
   const body = await request.json().catch(() => null);
   if (!body || typeof body.data !== "object" || body.data === null) {
@@ -147,7 +134,6 @@ export async function onRequestPost({ request, env }) {
   await upsertCategories(db, body.data);
   await upsertBookings(db, body.data);
   await upsertSales(db, body.data);
-  await upsertUsers(db, body.data);
   await upsertResetRequests(db, body.data);
   return json({ ok: true, updatedAt: Date.now() });
 }
@@ -155,6 +141,8 @@ export async function onRequestPost({ request, env }) {
 // Called the moment Super Admin resolves a request, so it stops reappearing
 // from other devices' next sync push instead of waiting on a full re-sync.
 export async function onRequestDelete({ request, env }) {
+  const staff = await requireSession(request, env);
+  if (!staff) return json({ ok: false, error: "unauthorized" }, 401);
   if (!env.BILLING_DB) return json({ ok: false, error: "not_configured" }, 500);
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return json({ ok: false, error: "missing_id" }, 400);
@@ -162,7 +150,9 @@ export async function onRequestDelete({ request, env }) {
   return json({ ok: true });
 }
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
+  const staff = await requireSession(request, env);
+  if (!staff) return json({ ok: false, error: "unauthorized" }, 401);
   if (!env.BILLING_DB) return json({ ok: false, error: "not_configured" }, 500);
   const db = env.BILLING_DB;
 
@@ -199,9 +189,12 @@ export async function onRequestGet({ env }) {
   let users = [];
   try {
     const userRows = await db.prepare("SELECT * FROM users ORDER BY id").all();
+    // Passwords never leave the server, hashed or not — no legitimate
+    // client code needs them, since login/change-password now verify
+    // server-side against /api/auth/*.
     users = userRows.results.map(row => ({
       id: row.legacy_id, name: row.name, email: row.email || "", phone: row.phone || "",
-      role: row.role, password: row.password || undefined, locked: !!row.locked,
+      role: row.role, locked: !!row.locked,
     }));
   } catch (err) {
     // ignore — falls back to empty, same as "no users synced yet"

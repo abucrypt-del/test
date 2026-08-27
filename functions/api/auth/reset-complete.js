@@ -16,7 +16,15 @@ export async function onRequestPost({ request, env }) {
   }
 
   const hash = await hashPassword(newPassword);
-  await env.AUTH_KV.put("superadmin:password", JSON.stringify({ hash, updatedAt: Date.now() }));
+  if (env.BILLING_DB) {
+    const superAdmin = await env.BILLING_DB.prepare(
+      "SELECT legacy_id FROM users WHERE role = 'Super Admin' ORDER BY legacy_id LIMIT 1",
+    ).first();
+    if (superAdmin) {
+      await env.BILLING_DB.prepare("UPDATE users SET password = ?1, updated_at = datetime('now') WHERE legacy_id = ?2")
+        .bind(hash, superAdmin.legacy_id).run();
+    }
+  }
   await env.AUTH_KV.put(`reset:${token}`, JSON.stringify({ ...record, used: true }), { expirationTtl: 60 });
 
   return json({ ok: true });
