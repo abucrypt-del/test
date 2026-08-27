@@ -16,7 +16,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Non-blocking: the deploy token may not have D1 permissions yet. When
+      # it doesn't, this step fails harmlessly and the real deploy below
+      # still runs — it must never be what keeps the site from updating.
       - name: Apply D1 schema
+        continue-on-error: true
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
