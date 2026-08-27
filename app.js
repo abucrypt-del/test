@@ -31,6 +31,12 @@ let menuItems = parseNonEmpty(localStorage.getItem("alyazi-menu-en-v6")) || [
 // whatever code they already have; anything missing one gets the next
 // number in list order.
 menuItems = menuItems.map((item, index) => ({ ...item, code: item.code || String(index + 1).padStart(2, "0") }));
+// Write the defaults back immediately (not just on first edit) so a brand
+// new browser has "alyazi-menu-en-v6"/"alyazi-categories-v1" in localStorage
+// from the first load — otherwise the sync snapshot never picks them up and
+// the menu never reaches D1 until someone happens to touch Settings first.
+localStorage.setItem("alyazi-menu-en-v6", JSON.stringify(menuItems));
+localStorage.setItem("alyazi-categories-v1", JSON.stringify(menuCategories));
 function nextMenuCode() {
   return String(menuItems.length + 1).padStart(2, "0");
 }
