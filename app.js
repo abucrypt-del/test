@@ -1945,7 +1945,7 @@ renderUpiAccounts();
 applyPrintPaperSize();
 
 // --- Sync: snapshots all alyazi-* localStorage keys into IndexedDB every
-// 20s and on demand, then best-effort mirrors the same snapshot to the
+// 5s and on demand, then best-effort mirrors the same snapshot to the
 // AUTH_KV-backed cloud endpoint. Cloud failures never block the local save.
 const SYNC_DB_NAME = "alyazi-sync";
 const SYNC_STORE_NAME = "snapshots";
@@ -2058,7 +2058,7 @@ async function runSync({ manual = false } = {}) {
 }
 
 document.querySelector("#sync-button")?.addEventListener("click", () => runSync({ manual: true }));
-setInterval(() => runSync({ manual: false }), 20000);
+setInterval(() => runSync({ manual: false }), 5000);
 runSync({ manual: false });
 
 // --- Topbar status strip: today's date, plus whether the restaurant is
