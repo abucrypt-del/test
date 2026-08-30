@@ -12,7 +12,7 @@
     :root { --ink:#f8f4ea; --muted:#a9b1a3; --paper:#18231e; --panel:#213029; --line:#33463b; --gold:#e0aa56; --coral:#ce6a49; }
     * { box-sizing:border-box; } body { margin:0; min-width:320px; background:radial-gradient(circle at 85% 10%,#30473a,transparent 30%),var(--paper); color:var(--ink); font-family:"DM Sans",sans-serif; }
     header { min-height:78px; padding:0 5vw; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); }
-    .brand { display:flex; align-items:center; gap:12px; } .mark { width:39px; height:39px; display:grid; place-items:center; border-radius:50%; background:var(--gold); color:#233129; font:700 14px "Font02",serif; } h1 { margin:0; font:400 24px "Font02",serif; } .eyebrow { margin:0 0 4px; color:var(--gold); font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; } .live { color:#a7d073; font-size:12px; } .live:before { content:""; display:inline-block; width:7px; height:7px; margin-right:8px; border-radius:50%; background:#a7d073; }
+    .brand { display:flex; align-items:center; gap:12px; } .mark { height:42px; width:auto; display:block; } h1 { margin:0; font:400 24px "Font02",serif; } .eyebrow { margin:0 0 4px; color:var(--gold); font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; } .live { color:#a7d073; font-size:12px; } .live:before { content:""; display:inline-block; width:7px; height:7px; margin-right:8px; border-radius:50%; background:#a7d073; }
     main { max-width:1180px; margin:0 auto; padding:38px 5vw 70px; } .page-heading { display:flex; justify-content:space-between; align-items:end; margin-bottom:26px; } .page-heading h2 { margin:0; font:700 34px "Font02",serif; } .clock { color:var(--muted); font-size:13px; }
     .empty { padding:90px 20px; text-align:center; border:1px dashed var(--line); border-radius:7px; color:var(--muted); } .empty strong { display:block; margin-bottom:8px; color:var(--ink); font:700 22px "Font02",serif; }
     .kot-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(285px,1fr)); gap:16px; } .kot-card { overflow:hidden; border:1px solid var(--line); border-radius:6px; background:var(--panel); } .kot-card.alerting { animation:kitchen-alert-blink .65s ease-in-out infinite; border-color:#d38156; box-shadow:0 0 0 2px rgba(211,129,86,.35), inset 0 0 0 1px rgba(255,255,255,.08); }
@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <header><div class="brand"><span class="mark">AYM</span><div><p class="eyebrow">Kitchen display</p><h1>AL YAZI MANDI RESTRAUNT</h1></div></div><span class="live">Live orders</span></header>
+  <header><div class="brand"><img class="mark" src="al-yazi-mandi-logo-white-transparent.png" alt="Al Yazi Mandi" /><div><p class="eyebrow">Kitchen display</p><h1>AL YAZI MANDI RESTRAUNT</h1></div></div><span class="live">Live orders</span></header>
   <main><div class="page-heading"><h2>Incoming KOTs</h2><span class="clock" id="clock"></span></div><div id="kot-list"></div></main>
   <script>
     const money = value => `₹${Number(value).toFixed(2)}`;
