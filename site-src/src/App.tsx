@@ -209,13 +209,8 @@ function FoodCursor() {
     className={`food-cursor food-cursor--${cursorState}`}
     style={{ left: position.x, top: position.y }}
   >
-    <span className="food-cursor__halo" />
-    <span className="food-cursor__smoke food-cursor__smoke--one" />
-    <span className="food-cursor__smoke food-cursor__smoke--two" />
-    <span className="food-cursor__smoke food-cursor__smoke--three" />
-    <span className="food-cursor__smoke food-cursor__smoke--four" />
-    <span className="food-cursor__smoke food-cursor__smoke--five" />
-    <img src={asset('chicken-65-cursor.png')} alt="" />
+    <span className="food-cursor__glow" />
+    <span className="food-cursor__core"><Flame size={21} strokeWidth={2.2} /></span>
   </div>;
 }
 
@@ -484,7 +479,7 @@ function ReservationModal({ onClose }: { onClose: () => void }) {
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-semibold text-[#705346]">Date
-              <input data-testid="input-reservation-date" required type="date" min={todayIsoDate()} value={date} onChange={(e) => setDate(e.target.value)} className="mt-1.5 w-full rounded-lg border border-[#d8c7b2] bg-[#eee3d2] px-4 py-3 text-sm outline-none focus:border-[#ad542f]" />
+              <input data-testid="input-reservation-date" required type="date" min={todayIsoDate()} value={date} onChange={(e) => setDate(e.target.value)} onClick={(e) => e.currentTarget.showPicker?.()} className="mt-1.5 w-full rounded-lg border border-[#d8c7b2] bg-[#eee3d2] px-4 py-3 text-sm outline-none focus:border-[#ad542f] cursor-pointer" />
             </label>
             <div>
               <span className="text-xs font-semibold text-[#705346]">Guests (max {MAX_GUESTS})</span>
