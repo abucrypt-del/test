@@ -16,9 +16,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Non-blocking: the deploy token may not have D1 permissions yet. When
-      # it doesn't, this step fails harmlessly and the real deploy below
-      # still runs — it must never be what keeps the site from updating.
+      # Non-blocking on purpose: a schema problem (like the batch-abort
+      # issue documented in schema.sql) should never be what keeps the
+      # actual site deploy below from running.
       - name: Apply D1 schema
         continue-on-error: true
         uses: cloudflare/wrangler-action@v3
@@ -27,9 +27,14 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: d1 execute alyazi-billing-db --remote --file=./schema.sql
 
+      # Only `public/` is uploaded as static assets — schema.sql,
+      # wrangler.toml, site-src/, and the deployment docs stay out of the
+      # deploy directory entirely so they're never publicly fetchable.
+      # Pages Functions in `functions/` are still auto-detected from the
+      # repo root regardless of this directory argument.
       - name: Deploy static site to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy . --project-name=alyazi-billing-app --commit-dirty=true
+          command: pages deploy public --project-name=alyazi-billing-app --commit-dirty=true
