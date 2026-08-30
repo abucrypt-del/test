@@ -73,7 +73,7 @@ button { border: 0; font: inherit; cursor: pointer; color: inherit; }
 .cabin-tab.active { background: var(--sage-dark); color: white; border-color: var(--sage-dark); font-weight: 600; }
 .cabin-tab .item-count { position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: var(--coral); color: white; font-size: 9px; font-weight: 700; }
 .takeaway-section { margin-top: 22px; }
-.new-takeaway-btn { width: 100%; margin-bottom: 8px; padding: 8px 10px; border: 1px dashed var(--sage); border-radius: 5px; background: transparent; color: var(--sage-dark); font: 700 11px "DM Sans", sans-serif; letter-spacing: .01em; text-align: center; white-space: nowrap; cursor: pointer; transition: all .15s; }
+.new-takeaway-btn { width: 100%; margin-top: 22px; padding: 8px 10px; border: 1px dashed var(--sage); border-radius: 5px; background: transparent; color: var(--sage-dark); font: 700 11px "DM Sans", sans-serif; letter-spacing: .01em; text-align: center; white-space: nowrap; cursor: pointer; transition: all .15s; }
 .new-takeaway-btn:hover { background: #eef3e9; border-style: solid; }
 .takeaway-tabs { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
 .takeaway-tab { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
