@@ -930,7 +930,7 @@ function renderOrder() {
   const paidUpfront = !!activeCabin && activeCabin.paidUpfront;
   document.querySelector("#checkout-button").disabled = !order.size || kotState !== "completed" || paidUpfront;
   const sendKotButton = document.querySelector("#send-kot");
-  sendKotButton.hidden = isTakeaway || orderMode !== "Dine In";
+  sendKotButton.hidden = isTakeaway;
   const hasPendingKotItems = !!activeCabin && pendingKotItems(activeCabin).length > 0;
   sendKotButton.disabled = !order.size || !hasPendingKotItems;
   document.querySelector("#send-kot span").textContent = hasPendingKotItems ? "Send & print KOT" : "KOT sent & printed";
@@ -1057,9 +1057,6 @@ function pendingKotItems(cabin) {
 
 function sendKot() {
   if (!requireGuestPhone()) return;
-  // KOTs are a dine-in concept — takeaway/delivery tickets shouldn't
-  // generate a kitchen ticket through this path.
-  if (orderMode !== "Dine In") { showToast("KOT is only sent for Dine In orders"); return; }
   const cabin = getCabinData(currentCabinId);
   const newItems = pendingKotItems(cabin);
   if (!newItems.length) return;
@@ -1069,7 +1066,10 @@ function sendKot() {
   const kots = getKots();
   kots[currentCabinId] = { cabinId: currentCabinId, cabinName: cabin.name, items: newItems, mode: orderMode, status: "sent", isAdditional: isAdditionalRound, createdAt: new Date().toISOString() };
   saveKots(kots);
-  printTicket("KOT", false, newItems, isAdditionalRound);
+  // Only the physical/print ticket is restricted to Dine In — the
+  // WhatsApp kitchen notification still goes out for every order type,
+  // same as before.
+  if (orderMode === "Dine In") printTicket("KOT", false, newItems, isAdditionalRound);
   openWhatsApp(integrations.kitchenWhatsapp || "", buildOrderMessage(isAdditionalRound ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT", newItems));
   cabin.kotSentQuantities = Object.fromEntries([...order.values()].map(item => [item.id, item.quantity]));
   kotState = "sent";
