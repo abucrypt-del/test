@@ -59,7 +59,8 @@ CREATE TABLE IF NOT EXISTS bookings (
   notified_hour INTEGER NOT NULL DEFAULT 0,
   notified_half_hour INTEGER NOT NULL DEFAULT 0,
   cancel_reason TEXT,
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  source TEXT NOT NULL DEFAULT 'staff'
 );
 
 CREATE TABLE IF NOT EXISTS sales (
@@ -106,21 +107,22 @@ CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);
 CREATE INDEX IF NOT EXISTS idx_bookings_datetime ON bookings(datetime);
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
 
--- Distinguishes bookings a guest made themselves on the public site from
--- ones staff entered in-app. Errors harmlessly on redeploys where this
--- column already exists (the deploy step that runs this file tolerates
--- failure by design — see .github/workflows/pages-deploy.yml).
-ALTER TABLE bookings ADD COLUMN source TEXT NOT NULL DEFAULT 'staff';
-
 -- Enforces "one active booking per cabin per slot" at the data layer, not
 -- just in application code — two simultaneous requests for the same
 -- cabin+datetime can't both insert; the second hits this constraint.
 -- Partial (WHERE cancelled = 0) so a cancelled booking frees the slot.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_cabin_slot ON bookings(cabin_legacy_id, datetime) WHERE cancelled = 0;
 
+-- IMPORTANT: `wrangler d1 execute --file` runs this whole file as one
+-- all-or-nothing batch — a single failing statement (e.g. an ADD COLUMN
+-- that already exists) aborts every statement after it too, not just
+-- itself. So an ALTER TABLE migration below must stay here only until it
+-- has actually been applied to the real production D1 (via a deploy that
+-- ran clean) — at that point fold the column into the CREATE TABLE above
+-- and delete the ALTER line, so it can never block a later migration
+-- again. Never leave more than one already-satisfied ALTER in this file.
+--
 -- A cabin reservation now carries a start (existing `datetime` column) and
--- an end, plus a verified guest email for the confirmation message. Errors
--- harmlessly on redeploys where these columns already exist, same as the
--- `source` migration above.
+-- an end, plus a verified guest email for the confirmation message.
 ALTER TABLE bookings ADD COLUMN end_datetime TEXT;
 ALTER TABLE bookings ADD COLUMN email TEXT NOT NULL DEFAULT '';
