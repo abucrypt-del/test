@@ -117,3 +117,10 @@ ALTER TABLE bookings ADD COLUMN source TEXT NOT NULL DEFAULT 'staff';
 -- cabin+datetime can't both insert; the second hits this constraint.
 -- Partial (WHERE cancelled = 0) so a cancelled booking frees the slot.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_cabin_slot ON bookings(cabin_legacy_id, datetime) WHERE cancelled = 0;
+
+-- A cabin reservation now carries a start (existing `datetime` column) and
+-- an end, plus a verified guest email for the confirmation message. Errors
+-- harmlessly on redeploys where these columns already exist, same as the
+-- `source` migration above.
+ALTER TABLE bookings ADD COLUMN end_datetime TEXT;
+ALTER TABLE bookings ADD COLUMN email TEXT NOT NULL DEFAULT '';

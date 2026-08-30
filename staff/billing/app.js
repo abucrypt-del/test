@@ -1791,6 +1791,10 @@ function formatBookingWhen(datetime) {
   return new Date(datetime).toLocaleString([], { hour: "2-digit", minute: "2-digit", month: "short", day: "numeric" });
 }
 
+function formatBookingTimeOnly(datetime) {
+  return new Date(datetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
 function renderBookingsList() {
   const list = document.querySelector("#bookings-list");
   if (!list) return;
@@ -1809,7 +1813,9 @@ function renderBookingsList() {
     const actions = canModify ? `${canEdit ? ` <button class="secondary-action" data-edit-booking="${booking.id}" style="padding:3px 8px;font-size:9px;margin-left:6px;margin-top:0;">✎ Edit</button>` : ""}${canCancel ? ` <button class="secondary-action" data-cancel-booking="${booking.id}" style="padding:3px 8px;font-size:9px;margin-left:6px;margin-top:0;">✕ Cancel</button>` : ""}` : "";
     const reasonLine = booking.cancelled && booking.cancelReason ? `<small>Reason: ${escapeHtml(booking.cancelReason)}</small>` : "";
     const sourceTag = booking.source === "web" ? ` · <strong style="color:var(--sage-dark);">Web booking</strong>` : "";
-    return `<div class="guest-directory-row"><div><strong>${escapeHtml(booking.cabinName)} · ${escapeHtml(booking.name)}</strong><small>${booking.guests} guest${booking.guests === 1 ? "" : "s"} · ${escapeHtml(booking.phone)} · ${formatBookingWhen(booking.datetime)}${sourceTag}</small>${reasonLine}</div><span>${statusLabel}${actions}</span></div>`;
+    const timeRange = booking.endDatetime ? `${formatBookingWhen(booking.datetime)}–${formatBookingTimeOnly(booking.endDatetime)}` : formatBookingWhen(booking.datetime);
+    const emailTag = booking.email ? ` · ${escapeHtml(booking.email)}` : "";
+    return `<div class="guest-directory-row"><div><strong>${escapeHtml(booking.cabinName)} · ${escapeHtml(booking.name)}</strong><small>${booking.guests} guest${booking.guests === 1 ? "" : "s"} · ${escapeHtml(booking.phone)}${emailTag} · ${timeRange}${sourceTag}</small>${reasonLine}</div><span>${statusLabel}${actions}</span></div>`;
   };
   const upcoming = bookings.filter(booking => !booking.cancelled && new Date(booking.datetime).getTime() >= now).sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
   const past = bookings.filter(booking => booking.cancelled || new Date(booking.datetime).getTime() < now).sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
@@ -2068,27 +2074,32 @@ async function runSync({ manual = false } = {}) {
   if (syncInFlight) return;
   const snapshot = collectSyncSnapshot();
   const snapshotString = JSON.stringify(snapshot);
-  if (!manual && snapshotString === lastSyncedSnapshot) return;
+  // A push (this device's own data) only happens when something actually
+  // changed, or the user forced it — but the live pulls below must always
+  // run every tick regardless, or an idle screen with no local changes
+  // would never notice a new web booking / reset request.
+  const hasChanges = manual || snapshotString !== lastSyncedSnapshot;
 
   syncInFlight = true;
   const syncButton = document.querySelector("#sync-button");
   const syncStatus = document.querySelector("#sync-status");
-  syncButton?.classList.add("syncing");
+  if (hasChanges) syncButton?.classList.add("syncing");
   try {
-    const updatedAt = Date.now();
-    await saveSnapshotLocally(snapshot, updatedAt);
-    lastSyncedSnapshot = snapshotString;
-
     let cloudOk = true;
-    try {
-      await saveSnapshotToCloud(snapshot, updatedAt);
-    } catch (err) {
-      cloudOk = false;
+    const updatedAt = Date.now();
+    if (hasChanges) {
+      await saveSnapshotLocally(snapshot, updatedAt);
+      lastSyncedSnapshot = snapshotString;
+      try {
+        await saveSnapshotToCloud(snapshot, updatedAt);
+      } catch (err) {
+        cloudOk = false;
+      }
     }
     await pullResetRequestsIfSuperAdmin();
     await pullBookingsLive();
 
-    if (syncStatus) {
+    if (hasChanges && syncStatus) {
       syncStatus.textContent = cloudOk
         ? `Synced ${formatSyncTime(updatedAt)}`
         : `Saved locally ${formatSyncTime(updatedAt)} — cloud unreachable`;
@@ -2103,7 +2114,7 @@ async function runSync({ manual = false } = {}) {
 }
 
 document.querySelector("#sync-button")?.addEventListener("click", () => runSync({ manual: true }));
-setInterval(() => runSync({ manual: false }), 5000);
+setInterval(() => runSync({ manual: false }), 2000);
 runSync({ manual: false });
 
 // --- Topbar status strip: today's date, plus whether the restaurant is
