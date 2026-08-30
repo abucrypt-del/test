@@ -1066,11 +1066,11 @@ function sendKot() {
   const kots = getKots();
   kots[currentCabinId] = { cabinId: currentCabinId, cabinName: cabin.name, items: newItems, mode: orderMode, status: "sent", isAdditional: isAdditionalRound, createdAt: new Date().toISOString() };
   saveKots(kots);
-  // Only the physical/print ticket is restricted to Dine In — the
-  // WhatsApp kitchen notification still goes out for every order type,
-  // same as before.
-  if (orderMode === "Dine In") printTicket("KOT", false, newItems, isAdditionalRound);
-  openWhatsApp(integrations.kitchenWhatsapp || "", buildOrderMessage(isAdditionalRound ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT", newItems));
+  // No physical KOT printing anymore — kitchen is notified over
+  // WhatsApp instead, and only for Dine In orders.
+  if (orderMode === "Dine In") {
+    openWhatsApp(integrations.kitchenWhatsapp || "", buildOrderMessage(isAdditionalRound ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT", newItems));
+  }
   cabin.kotSentQuantities = Object.fromEntries([...order.values()].map(item => [item.id, item.quantity]));
   kotState = "sent";
   cabin.kotState = "sent";
@@ -1150,7 +1150,6 @@ function finishPayment() {
     saveCabins();
     renderOrder();
     renderCabinTabs();
-    printTicket("KOT");
     showToast(`Payment received by ${paymentMethod}. Sent to kitchen — starting next ticket.`);
     createTakeawayTicket();
     return;
