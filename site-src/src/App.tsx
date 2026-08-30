@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowDown, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Flame, Instagram, MapPin, Menu, MessageCircle, Minus, Phone, Plus, Send, Sparkles, Utensils, X } from 'lucide-react';
+import { ArrowDown, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Flame, Instagram, MapPin, Menu, MessageCircle, Minus, Phone, Plus, Send, Sparkles, Star, Utensils, X } from 'lucide-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import NotFound from '@/pages/not-found';
 import { Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
@@ -225,7 +225,7 @@ function Hero({ onReserve }: { onReserve: () => void }) {
     <div className="absolute -right-8 top-40 h-[475px] w-[475px] rounded-full border border-[#e8c68c]/10" />
     <div className="absolute right-[14%] top-[27%] h-2 w-2 rounded-full bg-[#eab66d] ember" />
     <div className="absolute right-[24%] top-[35%] h-1.5 w-1.5 rounded-full bg-[#eab66d] ember" style={{ animationDelay: '1.2s' }} />
-    <motion.div style={{ opacity, y }} className="absolute bottom-0 right-[6%] h-[85%] w-[55%] max-w-[780px] overflow-hidden rounded-t-[50%] mix-blend-screen">
+    <motion.div style={{ opacity, y }} className="absolute bottom-0 right-[6%] hidden h-[85%] w-[55%] max-w-[780px] overflow-hidden rounded-t-[50%] mix-blend-screen md:block">
       <HeroVisual />
       <div className="absolute inset-0 bg-gradient-to-r from-[#311d18] via-transparent to-transparent pointer-events-none" />
     </motion.div>
@@ -238,7 +238,28 @@ function Hero({ onReserve }: { onReserve: () => void }) {
           <button data-testid="button-hero-reserve" onClick={onReserve} className="group inline-flex items-center gap-3 rounded-full bg-[#e8d7bd] px-6 py-3.5 text-sm font-bold text-[#35231b] transition-transform hover:-translate-y-1">Save your cabin <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" /></button>
           <a data-testid="link-hero-menu" href="#menu" className="inline-flex items-center gap-2 rounded-full border border-[#ead8bf]/35 px-6 py-3.5 text-sm font-semibold text-[#f5e8d8] transition-colors hover:border-[#ead8bf]">See the menu</a>
         </div>
-        <div className="mt-16 flex items-center gap-7 text-[10px] uppercase tracking-[.18em] text-[#f1e4d4]/55">
+        <div data-testid="badge-google-rating" className="mt-8 inline-flex flex-wrap items-center gap-4 rounded-2xl bg-[#f9f3e9] px-5 py-4 text-[#36231a] shadow-[0_20px_50px_rgba(20,12,8,.35)]">
+          <div className="flex items-center gap-2.5">
+            <span className="display text-3xl leading-none">4.8</span>
+            <span className="flex gap-0.5 text-[#e3b56d]" aria-label="4.8 out of 5 stars">
+              <Star size={13} fill="currentColor" strokeWidth={0} />
+              <Star size={13} fill="currentColor" strokeWidth={0} />
+              <Star size={13} fill="currentColor" strokeWidth={0} />
+              <Star size={13} fill="currentColor" strokeWidth={0} />
+              <Star size={13} fill="currentColor" strokeWidth={0} />
+            </span>
+          </div>
+          <div className="hidden h-9 w-px bg-[#d8c7b2] sm:block" />
+          <p className="max-w-[200px] text-xs font-semibold leading-snug text-[#36231a]">Loved by everyone who's <span className="text-[#ad542f]">tasted</span> our mandi.</p>
+          <div className="hidden h-9 w-px bg-[#d8c7b2] sm:block" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-base font-bold" style={{ fontFamily: 'arial, sans-serif' }}>
+              <span style={{ color: '#4285F4' }}>G</span><span style={{ color: '#EA4335' }}>o</span><span style={{ color: '#FBBC05' }}>o</span><span style={{ color: '#4285F4' }}>g</span><span style={{ color: '#34A853' }}>l</span><span style={{ color: '#EA4335' }}>e</span>
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-[.1em] text-[#705346]">Reviews</span>
+          </div>
+        </div>
+        <div className="mt-8 flex items-center gap-7 text-[10px] uppercase tracking-[.18em] text-[#f1e4d4]/55">
           <span className="flex items-center gap-2"><Flame size={14} className="text-[#df9f56]" /> Live charcoal</span>
           <span className="flex items-center gap-2"><Utensils size={14} className="text-[#df9f56]" /> Family dining</span>
         </div>
@@ -542,26 +563,11 @@ function ReservationModal({ onClose }: { onClose: () => void }) {
 }
 
 function Footer({ onReserve }: { onReserve: () => void }) {
-  return <footer id="visit" className="bg-[#271714] text-[#f8efe4]"><div className="mx-auto grid max-w-[1280px] gap-14 px-5 py-20 md:px-10 lg:grid-cols-[1.2fr_.8fr_.8fr] lg:py-28"><div><Logo light /><h2 className="display mt-8 max-w-[400px] text-5xl leading-[.98] md:text-6xl">Come for the mandi.<br /><span className="text-[#e4b76f]">Stay for the stories.</span></h2><div className="mt-9 flex flex-wrap gap-3"><WhatsAppButton /><button data-testid="button-footer-reserve" onClick={onReserve} className="rounded-full border border-[#ead8bf]/35 px-5 py-3 text-sm font-bold text-[#f8efe4] hover:border-[#ead8bf]">Reserve a cabin</button></div></div><div><span className="mono text-[9px] uppercase tracking-[.2em] text-[#d7df9e]">Find us</span><p className="mt-5 text-sm leading-6 text-[#ddcbb8]/70">AP Complex, opposite SIDCO Industrial Estate,<br />Nanjikottai Road, Thanjavur, Tamil Nadu 613006</p><a data-testid="link-footer-map" href="https://maps.google.com/?q=Al+Yazi+Mandi+Restaurant+Nanjikottai+Thanjavur" target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.13em] text-[#e4b76f]">Get directions <ArrowRight size={14} /></a></div><div><span className="mono text-[9px] uppercase tracking-[.2em] text-[#d7df9e]">Hours</span><div className="mt-5 space-y-3 text-sm text-[#ddcbb8]/70"><p><strong className="block text-[#f8efe4]">Every day</strong>12:00 noon – 10:00 PM</p></div><a data-testid="link-footer-instagram" href="https://instagram.com/alyazi_mandi" target="_blank" rel="noreferrer" className="mt-8 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.13em] text-[#e4b76f]"><Instagram size={15} /> @alyazi_mandi</a></div></div><div className="border-t border-[#ead8bf]/15"><div className="mx-auto flex max-w-[1280px] flex-col gap-2 px-5 py-6 text-[10px] uppercase tracking-[.15em] text-[#ddcbb8]/40 md:flex-row md:justify-between md:px-10"><span>© 2024 Al Yazi Mandi</span><span>Made for the middle of the table</span></div></div></footer>;
+  return <footer id="visit" className="bg-[#271714] text-[#f8efe4]"><div className="mx-auto grid max-w-[1280px] gap-14 px-5 py-20 md:px-10 lg:grid-cols-[1.2fr_.8fr_.8fr] lg:py-28"><div><Logo light /><h2 className="display mt-8 max-w-[400px] text-5xl leading-[.98] md:text-6xl">Come for the mandi.<br /><span className="text-[#e4b76f]">Stay for the stories.</span></h2><div className="mt-9 flex flex-wrap gap-3"><WhatsAppButton /><button data-testid="button-footer-reserve" onClick={onReserve} className="rounded-full border border-[#ead8bf]/35 px-5 py-3 text-sm font-bold text-[#f8efe4] hover:border-[#ead8bf]">Reserve a cabin</button></div></div><div><span className="mono text-[9px] uppercase tracking-[.2em] text-[#d7df9e]">Find us</span><p className="mt-5 text-sm leading-6 text-[#ddcbb8]/70">AP Complex, opposite SIDCO Industrial Estate,<br />Nanjikottai Road, Thanjavur, Tamil Nadu 613006</p><a data-testid="link-footer-map" href="https://maps.google.com/?q=Al+Yazi+Mandi+Restaurant+Nanjikottai+Thanjavur" target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.13em] text-[#e4b76f]">Get directions <ArrowRight size={14} /></a></div><div><span className="mono text-[9px] uppercase tracking-[.2em] text-[#d7df9e]">Hours</span><div className="mt-5 space-y-3 text-sm text-[#ddcbb8]/70"><p><strong className="block text-[#f8efe4]">Every day</strong>12:00 noon – 10:00 PM</p></div><a data-testid="link-footer-instagram" href="https://instagram.com/alyazi_mandi" target="_blank" rel="noreferrer" className="mt-8 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.13em] text-[#e4b76f]"><Instagram size={15} /> @alyazi_mandi</a></div></div><div className="border-t border-[#ead8bf]/15"><div className="mx-auto flex max-w-[1280px] flex-col gap-2 px-5 py-6 text-[10px] uppercase tracking-[.15em] text-[#ddcbb8]/40 md:flex-row md:justify-between md:px-10"><div className="flex flex-wrap items-center gap-x-5 gap-y-2"><span>© 2024 Al Yazi Mandi</span><a data-testid="link-staff-access" href="/staff/billing/" className="text-[#ddcbb8]/40 transition-colors hover:text-[#e4b76f]">Staff access</a></div><span>Made for the middle of the table</span></div></div></footer>;
 }
 
 function FloatingWhatsApp() {
   return <a data-testid="link-floating-whatsapp" href={waHref(WHATSAPP_NUMBER.intl, 'Hello Al Yazi Mandi')} target="_blank" rel="noreferrer" className="fixed bottom-5 right-5 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-[#c9da9b] text-[#26341e] shadow-lg transition-transform hover:scale-105 md:bottom-7 md:right-7"><MessageCircle size={20} /></a>;
-}
-
-function StaffAccess() {
-  return <section id="staff-access" className="bg-[#f5eee3] px-5 pb-24 text-[#36231a] md:px-10 md:pb-32">
-    <div className="mx-auto max-w-[1280px] rounded-[1.25rem] border border-[#d8c7b2] bg-[#eee3d2] p-7 md:p-10">
-      <div className="flex flex-col justify-between gap-7 md:flex-row md:items-center">
-        <div>
-          <span className="mono text-[9px] uppercase tracking-[.2em] text-[#80675a]">For the team</span>
-          <h2 className="display mt-3 text-3xl leading-none md:text-4xl">Staff workspace</h2>
-          <p className="mt-3 max-w-[510px] text-sm leading-6 text-[#705346]">A private sign-in for the people looking after today's tables, tickets and kitchen.</p>
-        </div>
-        <a data-testid="link-staff-access" href="/staff/billing/" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#3a241a] px-5 py-3 text-sm font-bold text-[#f9f3e9] transition-transform hover:-translate-y-1">Staff access <ArrowRight size={16} /></a>
-      </div>
-    </div>
-  </section>;
 }
 
 function OrderToast({ text }: { text: string }) {
@@ -578,7 +584,7 @@ function Home() {
   const [reservationOpen, setReservationOpen] = useState(false);
   const [orderToast, setOrderToast] = useState('');
   const onOrder = (name: string) => { setOrderToast(`${name} is ready to order`); window.setTimeout(() => setOrderToast(''), 3500); };
-  return <div className="noise min-h-[100dvh] bg-[#f5eee3]"><FoodCursor /><Navigation onReserve={() => setReservationOpen(true)} /><main><Hero onReserve={() => setReservationOpen(true)} /><Story /><MenuSection onOrder={onOrder} /><Ritual /><Gallery /><Catering onReserve={() => setReservationOpen(true)} /><section className="bg-[#e7d9c8] px-5 pb-24 md:px-10 md:pb-32"><div className="mx-auto flex max-w-[1280px] flex-col items-start justify-between gap-8 rounded-[1.25rem] bg-[#d7df9e] p-8 text-[#34261c] md:flex-row md:items-center md:p-12"><div><span className="mono text-[9px] uppercase tracking-[.2em] text-[#59633b]">No waiting by the phone</span><h2 className="display mt-3 text-4xl leading-none md:text-5xl">Hungry now? We get it.</h2><p className="mt-3 text-sm text-[#59633b]">Call ahead or send us a WhatsApp. We will have the coals going.</p></div><div className="flex flex-wrap gap-3"><WhatsAppButton label="Order your mandi" /><CallButton label={<><Phone size={16} /> Call us</>} className="inline-flex items-center gap-2 rounded-full border border-[#59633b]/35 px-5 py-3 text-sm font-bold text-[#34261c]" /></div></div></section><StaffAccess /></main><Footer onReserve={() => setReservationOpen(true)} />{reservationOpen && <ReservationModal onClose={() => setReservationOpen(false)} />}{orderToast && <OrderToast text={orderToast} />}<FloatingWhatsApp /></div>;
+  return <div className="noise min-h-[100dvh] bg-[#f5eee3]"><FoodCursor /><Navigation onReserve={() => setReservationOpen(true)} /><main><Hero onReserve={() => setReservationOpen(true)} /><Story /><MenuSection onOrder={onOrder} /><Ritual /><Gallery /><Catering onReserve={() => setReservationOpen(true)} /><section className="bg-[#e7d9c8] px-5 pb-24 md:px-10 md:pb-32"><div className="mx-auto flex max-w-[1280px] flex-col items-start justify-between gap-8 rounded-[1.25rem] bg-[#d7df9e] p-8 text-[#34261c] md:flex-row md:items-center md:p-12"><div><span className="mono text-[9px] uppercase tracking-[.2em] text-[#59633b]">No waiting by the phone</span><h2 className="display mt-3 text-4xl leading-none md:text-5xl">Hungry now? We get it.</h2><p className="mt-3 text-sm text-[#59633b]">Call ahead or send us a WhatsApp. We will have the coals going.</p></div><div className="flex flex-wrap gap-3"><WhatsAppButton label="Order your mandi" /><CallButton label={<><Phone size={16} /> Call us</>} className="inline-flex items-center gap-2 rounded-full border border-[#59633b]/35 px-5 py-3 text-sm font-bold text-[#34261c]" /></div></div></section></main><Footer onReserve={() => setReservationOpen(true)} />{reservationOpen && <ReservationModal onClose={() => setReservationOpen(false)} />}{orderToast && <OrderToast text={orderToast} />}<FloatingWhatsApp /></div>;
 }
 
 function StaffBillingEntry() {
