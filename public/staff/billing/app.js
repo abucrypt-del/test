@@ -337,6 +337,10 @@ function renderCabinTabs() {
   const activeCabin = getCabinData(currentCabinId);
   if (currentCabinLabel && activeCabin) currentCabinLabel.textContent = activeCabin.name;
   if (cabinBillingName && activeCabin) cabinBillingName.textContent = activeCabin.name;
+  // Take Away sidebar only makes sense while working a takeaway ticket —
+  // hide it whenever a Dine In cabin is the active selection.
+  const takeawaySection = document.querySelector(".takeaway-section");
+  if (takeawaySection) takeawaySection.hidden = !activeCabin || activeCabin.type !== "takeaway";
 }
 
 function renderTakeawayBoard() {
