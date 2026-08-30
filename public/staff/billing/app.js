@@ -930,7 +930,7 @@ function renderOrder() {
   const paidUpfront = !!activeCabin && activeCabin.paidUpfront;
   document.querySelector("#checkout-button").disabled = !order.size || kotState !== "completed" || paidUpfront;
   const sendKotButton = document.querySelector("#send-kot");
-  sendKotButton.hidden = isTakeaway;
+  sendKotButton.hidden = isTakeaway || orderMode !== "Dine In";
   const hasPendingKotItems = !!activeCabin && pendingKotItems(activeCabin).length > 0;
   sendKotButton.disabled = !order.size || !hasPendingKotItems;
   document.querySelector("#send-kot span").textContent = hasPendingKotItems ? "Send & print KOT" : "KOT sent & printed";
@@ -989,17 +989,17 @@ function addItem(id) {
   showToast(`${item.name} added to ticket`);
 }
 
-function printTicket(type, isReprint = false, itemsOverride = null) {
+function printTicket(type, isReprint = false, itemsOverride = null, isAdditional = false) {
   const items = itemsOverride || [...order.values()];
   if (!items.length) { showToast(`Add items before printing ${type}`); return; }
-  renderPrintSheet(type, isReprint, itemsOverride);
+  renderPrintSheet(type, isReprint, itemsOverride, isAdditional);
   document.body.classList.add("print-ticket");
   window.print();
   document.body.classList.remove("print-ticket");
   showToast(`${type} sent to configured printer`);
 }
 
-function renderPrintSheet(type, isReprint = false, itemsOverride = null) {
+function renderPrintSheet(type, isReprint = false, itemsOverride = null, isAdditional = false) {
   const items = itemsOverride || [...order.values()];
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = type === "bill" ? Math.min(discountType === "amount" ? discountValue : subtotal * (discountValue / 100), subtotal) : 0;
@@ -1023,7 +1023,7 @@ function renderPrintSheet(type, isReprint = false, itemsOverride = null) {
   }
   const orderTypeLine = printSettings.showOrderType ? `<div class="print-line"><span>Order type</span><span>${safe(orderMode)}</span></div>` : "";
   const dateLine = `<div class="print-line"><span>Date</span><span>${new Date().toLocaleString()}</span></div>`;
-  const html = `<div style="text-align:${printSettings.headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}${printSettings.address ? `<p>${safe(printSettings.address)}</p>` : ""}${printSettings.phone ? `<p>Ph: ${safe(printSettings.phone)}</p>` : ""}${printSettings.whatsapp ? `<p>WhatsApp: ${safe(printSettings.whatsapp)}</p>` : ""}</div><hr><div style="text-align:center"><h2>${type === "KOT" ? (itemsOverride ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT") : "RECEIPT"}</h2>${receiptType ? `<p style="font-weight:bold;">${receiptType}</p>` : ""}</div>${guestInfo}${orderTypeLine}${locationLine}${orderNumberLine}${dateLine}<hr>${items.map(item => `<div class="print-line"><span>${item.quantity} x ${safe(item.name)}</span><strong>${money(item.price * item.quantity)}</strong></div>`).join("")}${type === "KOT" ? "" : `<hr><div class="print-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>${discountAmount > 0 ? `<div class="print-line"><span>Discount</span><strong>-${money(discountAmount)}</strong></div>` : ""}${printSettings.showTax ? `<div class="print-line"><span>Tax (${printSettings.taxRatePercent}%)</span><strong>${money(tax)}</strong></div>` : ""}<div class="print-line print-total"><span>Total</span><strong>${money(total)}</strong></div>`}${printSettings.footer ? `<hr><div style="text-align:${printSettings.footerAlign}"><p>${safe(printSettings.footer)}</p></div>` : ""}`;
+  const html = `<div style="text-align:${printSettings.headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}${printSettings.address ? `<p>${safe(printSettings.address)}</p>` : ""}${printSettings.phone ? `<p>Ph: ${safe(printSettings.phone)}</p>` : ""}${printSettings.whatsapp ? `<p>WhatsApp: ${safe(printSettings.whatsapp)}</p>` : ""}</div><hr><div style="text-align:center"><h2>${type === "KOT" ? (isAdditional ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT") : "RECEIPT"}</h2>${receiptType ? `<p style="font-weight:bold;">${receiptType}</p>` : ""}</div>${guestInfo}${orderTypeLine}${locationLine}${orderNumberLine}${dateLine}<hr>${items.map(item => `<div class="print-line"><span>${item.quantity} x ${safe(item.name)}</span><strong>${money(item.price * item.quantity)}</strong></div>`).join("")}${type === "KOT" ? "" : `<hr><div class="print-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>${discountAmount > 0 ? `<div class="print-line"><span>Discount</span><strong>-${money(discountAmount)}</strong></div>` : ""}${printSettings.showTax ? `<div class="print-line"><span>Tax (${printSettings.taxRatePercent}%)</span><strong>${money(tax)}</strong></div>` : ""}<div class="print-line print-total"><span>Total</span><strong>${money(total)}</strong></div>`}${printSettings.footer ? `<hr><div style="text-align:${printSettings.footerAlign}"><p>${safe(printSettings.footer)}</p></div>` : ""}`;
   document.querySelector("#print-sheet").innerHTML = html;
   if (type === "bill" && !isReprint) {
     printedBills.push({ html: html.replace("--- ORIGINAL ---", "--- COPY ---"), createdAt: new Date().toISOString(), guest: currentOrderGuestName, phone: currentOrderGuestPhone, total, originalHtml: html });
@@ -1057,6 +1057,9 @@ function pendingKotItems(cabin) {
 
 function sendKot() {
   if (!requireGuestPhone()) return;
+  // KOTs are a dine-in concept — takeaway/delivery tickets shouldn't
+  // generate a kitchen ticket through this path.
+  if (orderMode !== "Dine In") { showToast("KOT is only sent for Dine In orders"); return; }
   const cabin = getCabinData(currentCabinId);
   const newItems = pendingKotItems(cabin);
   if (!newItems.length) return;
@@ -1066,7 +1069,7 @@ function sendKot() {
   const kots = getKots();
   kots[currentCabinId] = { cabinId: currentCabinId, cabinName: cabin.name, items: newItems, mode: orderMode, status: "sent", isAdditional: isAdditionalRound, createdAt: new Date().toISOString() };
   saveKots(kots);
-  printTicket("KOT", false, newItems);
+  printTicket("KOT", false, newItems, isAdditionalRound);
   openWhatsApp(integrations.kitchenWhatsapp || "", buildOrderMessage(isAdditionalRound ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT", newItems));
   cabin.kotSentQuantities = Object.fromEntries([...order.values()].map(item => [item.id, item.quantity]));
   kotState = "sent";

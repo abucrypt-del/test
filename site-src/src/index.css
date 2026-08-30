@@ -140,21 +140,23 @@
   width: 44px;
   height: 44px;
   border-radius: 999px;
-  border: 2px solid rgb(248 239 228 / .7);
-  background: rgb(245 238 227 / .12);
-  color: rgb(248 239 228 / .9);
+  border: 2px solid #fff;
+  background: rgb(255 255 255 / .2);
+  color: #fff;
+  /* Auto-inverts against whatever is under the cursor (light or dark
+     backgrounds, images, anything) instead of a fixed color that can
+     blend into a same-toned section and disappear. */
+  mix-blend-mode: difference;
   transition: background .3s ease, border-color .3s ease, color .3s ease;
 }
-.food-cursor--idle { opacity: .78; }
+.food-cursor--idle { opacity: .85; }
 .food-cursor--interactive {
   opacity: 1;
   transform: translate(-50%, -50%) scale(.95);
 }
 .food-cursor--interactive .food-cursor__glow { opacity: .5; }
 .food-cursor--interactive .food-cursor__core {
-  color: #e3b56d;
-  background: rgb(223 159 86 / .18);
-  border-color: #e3b56d;
+  background: rgb(255 255 255 / .45);
 }
 .food-cursor--food {
   opacity: 1;
@@ -168,6 +170,9 @@
   color: #fff3e2;
   background: #b95e3f;
   border-color: #e3b56d;
+  /* Solid opaque fill here, so drop the difference blend — it's already
+     visible on any background without needing to invert. */
+  mix-blend-mode: normal;
   animation: cursor-flicker 1s ease-in-out infinite;
 }
 @keyframes cursor-hot-glow {

@@ -477,7 +477,7 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
   body.print-ticket #print-sheet {
     display: block; width: 76mm; padding: 3mm; color: #111; background: white; font: 11px/1.4 monospace; text-align: center;
   }
-  #print-sheet img { width: 100%; max-height: 28mm; object-fit: contain; filter: invert(1); mix-blend-mode: multiply; margin-bottom: 2mm; }
+  #print-sheet img { width: 100%; max-height: 28mm; object-fit: contain; mix-blend-mode: multiply; margin-bottom: 2mm; }
   #print-sheet h1, #print-sheet h2 { margin: 2mm 0; font: 700 15px/1.2 monospace; }
   #print-sheet p { margin: 1.5mm 0; }
   #print-sheet hr { border: 0; border-top: 1px dashed #555; margin: 2mm 0; }
