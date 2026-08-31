@@ -402,7 +402,11 @@ function createTakeawayTicket() {
 
 function cancelTakeawayTicket(cabinId) {
   const cabin = getCabinData(cabinId);
-  if (!cabin || cabin.type !== "takeaway" || cabin.kotState !== "not-sent") return;
+  if (!cabin || cabin.type !== "takeaway") return;
+  if (cabin.kotState !== "not-sent") {
+    showToast("Can't cancel — already paid and sent to kitchen");
+    return;
+  }
   const isActive = cabinId === currentCabinId;
   cabins = cabins.filter(c => c.id !== cabinId);
   saveCabins();
