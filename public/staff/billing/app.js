@@ -2076,43 +2076,40 @@ function formatSyncTime(ts) {
   return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-// Unlike the other synced data, reset requests need a live pull, not just
-// hydrate-when-empty on load — the Super Admin's device already has data
-// (even if empty), and a request submitted mid-session from someone else's
-// device needs to actually show up in the notification bell.
-async function pullResetRequestsIfSuperAdmin() {
-  if (currentUser.role !== "Super Admin") return;
+// Reset requests and bookings both need a live pull, not just hydrate-when-
+// empty on load — a request or a guest booking submitted mid-session from
+// someone else's device has to show up here without waiting for a reload.
+// They used to each fetch /api/sync/d1 independently every tick; now that
+// several devices (desktop apps, phone, browser) can all be open on the same
+// restaurant at once, that doubled load was enough to tip the shared sync
+// endpoint over its CPU budget. One fetch per tick, shared between both.
+async function pullLiveDataFromCloud() {
+  let result;
   try {
     const resp = await fetch("/api/sync/d1", { credentials: "same-origin" });
     if (!resp.ok) return;
-    const result = await resp.json();
-    const remoteRaw = result?.data?.["alyazi-password-reset-requests"];
-    if (!remoteRaw) return;
-    const remoteRequests = JSON.parse(remoteRaw);
-    const local = getResetRequests();
-    const localIds = new Set(local.map(reqst => reqst.id));
-    const fresh = remoteRequests.filter(reqst => !localIds.has(reqst.id));
-    if (fresh.length) {
-      saveResetRequests([...local, ...fresh]);
-      renderResetRequests();
-    }
+    result = await resp.json();
   } catch (err) {
-    // best effort — next sync cycle will retry
+    return; // best effort — next sync cycle will retry
   }
-}
 
-// Bookings need the same live pull as reset requests, for the same reason:
-// a guest booking a cabin on the public site (or another device confirming
-// one) has to show up in Booking Management on an already-open session,
-// not just the next time this device's localStorage happens to be empty.
-async function pullBookingsLive() {
-  try {
-    const resp = await fetch("/api/sync/d1", { credentials: "same-origin" });
-    if (!resp.ok) return;
-    const result = await resp.json();
-    const remoteRaw = result?.data?.["alyazi-bookings-v1"];
-    if (!remoteRaw) return;
-    const remoteBookings = JSON.parse(remoteRaw);
+  if (currentUser.role === "Super Admin") {
+    const remoteRaw = result?.data?.["alyazi-password-reset-requests"];
+    if (remoteRaw) {
+      const remoteRequests = JSON.parse(remoteRaw);
+      const local = getResetRequests();
+      const localIds = new Set(local.map(reqst => reqst.id));
+      const fresh = remoteRequests.filter(reqst => !localIds.has(reqst.id));
+      if (fresh.length) {
+        saveResetRequests([...local, ...fresh]);
+        renderResetRequests();
+      }
+    }
+  }
+
+  const remoteBookingsRaw = result?.data?.["alyazi-bookings-v1"];
+  if (remoteBookingsRaw) {
+    const remoteBookings = JSON.parse(remoteBookingsRaw);
     const local = getBookings();
     const localIds = new Set(local.map(booking => booking.id));
     const fresh = remoteBookings.filter(booking => !localIds.has(booking.id));
@@ -2123,8 +2120,6 @@ async function pullBookingsLive() {
       const webBookings = fresh.filter(booking => booking.source === "web");
       if (webBookings.length) showToast(`${webBookings.length} new web booking${webBookings.length === 1 ? "" : "s"} received`);
     }
-  } catch (err) {
-    // best effort — next sync cycle will retry
   }
 }
 
@@ -2154,8 +2149,7 @@ async function runSync({ manual = false } = {}) {
         cloudOk = false;
       }
     }
-    await pullResetRequestsIfSuperAdmin();
-    await pullBookingsLive();
+    await pullLiveDataFromCloud();
 
     if (hasChanges && syncStatus) {
       syncStatus.textContent = cloudOk
@@ -2172,7 +2166,11 @@ async function runSync({ manual = false } = {}) {
 }
 
 document.querySelector("#sync-button")?.addEventListener("click", () => runSync({ manual: true }));
-setInterval(() => runSync({ manual: false }), 2000);
+// 2s was too aggressive once several devices could be open on the same
+// restaurant at once (each device hitting the shared sync endpoint every
+// tick) — 6s still shows a new booking within a few seconds, at a third
+// of the concurrent load.
+setInterval(() => runSync({ manual: false }), 6000);
 runSync({ manual: false });
 
 // --- Topbar status strip: today's date, plus whether the restaurant is
