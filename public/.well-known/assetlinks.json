@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.alyazimandi.billing",
+      "sha256_cert_fingerprints": [
+        "57:2A:B3:5D:29:1A:89:AF:28:47:14:32:5B:70:7F:26:EF:2A:F1:47:C8:C2:7E:74:FC:3E:7E:9F:32:87:F7:CF"
+      ]
+    }
+  }
+]
