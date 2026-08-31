@@ -1166,6 +1166,9 @@ function finishPayment() {
     saveCabins();
     renderOrder();
     renderCabinTabs();
+    // Customer-facing receipt (token, items, price, total) — not a
+    // kitchen KOT — so the guest has a printed record of a paid takeaway.
+    printTicket("bill");
     showToast(`Payment received by ${paymentMethod}. Sent to kitchen — starting next ticket.`);
     createTakeawayTicket();
     return;
