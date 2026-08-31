@@ -1030,7 +1030,9 @@ function renderPrintSheet(type, isReprint = false, itemsOverride = null, isAddit
   const guestInfo = currentOrderGuestName || currentOrderGuestPhone ? `<div class="print-line"><span>Guest</span><span>${safe(currentOrderGuestName)}${currentOrderGuestPhone ? ` ${safe(currentOrderGuestPhone)}` : ""}</span></div>` : "";
   const receiptType = type === "bill" ? (isReprint ? "--- COPY ---" : "--- ORIGINAL ---") : "";
   const activeCabin = getCabinData(currentCabinId);
-  const locationLine = activeCabin && activeCabin.type === "takeaway" ? `<div class="print-line"><span>Token</span><strong style="font-size:16px;">#${safe(activeCabin.token)}</strong></div>` : `<div class="print-line"><span>Table</span><span>${activeCabin ? safe(activeCabin.name) : "Dine In"}</span></div>`;
+  // On the token slip, the big header already is the token — this row
+  // would just repeat it, so skip it there.
+  const locationLine = type === "token" ? "" : activeCabin && activeCabin.type === "takeaway" ? `<div class="print-line"><span>Token</span><strong style="font-size:16px;">#${safe(activeCabin.token)}</strong></div>` : `<div class="print-line"><span>Table</span><span>${activeCabin ? safe(activeCabin.name) : "Dine In"}</span></div>`;
   let orderNumberLine = "";
   if (type === "bill" && activeCabin) {
     if (!activeCabin.orderNumber) {
