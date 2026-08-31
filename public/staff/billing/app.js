@@ -1877,7 +1877,7 @@ function renderBookingsList() {
   };
   const upcoming = bookings.filter(booking => !booking.cancelled && new Date(booking.datetime).getTime() >= now).sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
   const past = bookings.filter(booking => booking.cancelled || new Date(booking.datetime).getTime() < now).sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
-  list.innerHTML = `${upcoming.length ? `<div class="guest-directory-row" style="background:#f5f7ef;"><strong>Upcoming (${upcoming.length})</strong></div>${upcoming.map(row).join("")}` : ""}${past.length ? `<div class="guest-directory-row" style="background:#f5f7ef;"><strong>Past (${past.length})</strong></div>${past.map(row).join("")}` : ""}`;
+  list.innerHTML = `${upcoming.length ? `<div class="guest-directory-row" style="background:#f5f7ef;"><strong>Upcoming (${upcoming.length})</strong></div>${upcoming.map(row).join("")}` : ""}${past.length ? `<div class="guest-directory-row" style="background:#f5f7ef;"><strong>Booking History (${past.length})</strong></div>${past.map(row).join("")}` : `<div class="guest-directory-row" style="background:#f5f7ef;"><strong>Booking History</strong></div><div class="guest-directory-empty">No past bookings yet</div>`}`;
 }
 
 document.querySelector("#bookings-list").addEventListener("click", event => {
