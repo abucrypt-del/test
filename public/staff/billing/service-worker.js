@@ -16,7 +16,7 @@
 //    (same discipline as app.js's own ?v= query param). Bumping it makes
 //    the old cache get deleted on the next activate — nothing lingers.
 
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const CACHE_NAME = `alyazi-billing-shell-${CACHE_VERSION}`;
 const SCOPE = "/staff/billing/";
 
@@ -27,6 +27,8 @@ const SHELL_ASSETS = [
   "kitchen.html",
   "styles.css",
   "app.js",
+  "manifest.json",
+  "app-icon-512.png",
   "al-yazi-mandi-logo.png",
   "al-yazi-mandi-logo-inverted.png",
   "al-yazi-mandi-logo-white-transparent.png",

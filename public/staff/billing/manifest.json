@@ -7,6 +7,7 @@
   "background_color": "#f5efe5",
   "theme_color": "#3a241a",
   "icons": [
-    { "src": "al-yazi-mandi-logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }
+    { "src": "app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "app-icon-512.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }
   ]
 }
