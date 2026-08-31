@@ -220,11 +220,15 @@ function syncKotStatusFromStorage() {
 
 function applyOrderModeUI() {
   document.querySelectorAll(".order-mode").forEach(button => button.classList.toggle("active", button.dataset.mode === orderMode));
-  // "Take Away" as an order mode only makes sense on an actual takeaway
-  // ticket — a numbered Dine In cabin shouldn't offer it.
+  // "Take Away" only makes sense on an actual takeaway ticket, and
+  // conversely "Dine In" doesn't apply once you're on one — each mode
+  // button only shows for its matching ticket type.
   const activeCabin = getCabinData(currentCabinId);
+  const isTakeawayTicket = !!activeCabin && activeCabin.type === "takeaway";
   const takeAwayModeButton = document.querySelector('.order-mode[data-mode="Take Away"]');
-  if (takeAwayModeButton) takeAwayModeButton.hidden = !activeCabin || activeCabin.type !== "takeaway";
+  const dineInModeButton = document.querySelector('.order-mode[data-mode="Dine In"]');
+  if (takeAwayModeButton) takeAwayModeButton.hidden = !isTakeawayTicket;
+  if (dineInModeButton) dineInModeButton.hidden = isTakeawayTicket;
 }
 
 function switchCabin(cabinId) {
