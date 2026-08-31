@@ -186,14 +186,11 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 .checkout-button:disabled { opacity: .42; cursor: not-allowed; }
 .toast { position: fixed; z-index: 20; left: 50%; bottom: 28px; padding: 12px 18px; border-radius: 4px; background: var(--ink); color: white; font-size: 12px; opacity: 0; pointer-events: none; transform: translate(-50%, 12px); transition: opacity .2s, transform .2s; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
-.sync-widget { position: fixed; left: 20px; bottom: 20px; z-index: 6; display: flex; align-items: center; gap: 10px; }
-.sync-button { width: 44px; height: 44px; border-radius: 50%; background: var(--sage-dark); color: #f7f5ee; display: grid; place-items: center; box-shadow: 0 10px 24px rgba(45,41,36,.2); transition: background .15s, transform .1s; flex-shrink: 0; }
-.sync-button:hover { background: #29503f; }
-.sync-button:active { transform: scale(.94); }
-.sync-button svg { width: 19px; height: 19px; }
+.sync-widget { display: flex; align-items: center; gap: 8px; padding-right: 4px; border-right: 1px solid var(--line); }
+.sync-button svg { width: 18px; height: 18px; }
 .sync-button.syncing svg { animation: sync-spin .8s linear infinite; }
 @keyframes sync-spin { to { transform: rotate(360deg); } }
-.sync-status { font-size: 11px; color: var(--muted); background: var(--panel); padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); box-shadow: 0 6px 16px rgba(45,41,36,.1); white-space: nowrap; }
+.sync-status { font-size: 11px; color: var(--muted); white-space: nowrap; }
 .modal-backdrop { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(29,32,26,.4); backdrop-filter: blur(4px); }
 .modal-backdrop[hidden] { display: none; }
 #booking-modal, #reminder-modal, #cancel-reason-modal, #new-category-modal { z-index: 20; }
@@ -497,4 +494,4 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 @keyframes slide-in { from { opacity: 0; transform: translateX(7px); } to { opacity: 1; transform: translateX(0); } }
 @media (max-width: 950px) { .workspace { grid-template-columns: 1fr; } .ticket-panel { min-height: 510px; border-top: 1px solid var(--line); border-left: 0; } .ticket-header { padding-top: 32px; } }
 @media (max-width: 950px) { .ticket-panel { min-height: 0; } .order-list { min-height: 160px; } }
-@media (max-width: 600px) { .topbar { height: 65px; padding: 0 20px; } .service-status, .settings-button span { display: none; } .topbar-actions { gap: 13px; } .menu-panel { padding: 34px 20px 48px; } .welcome-row { display: block; } .outline-button { margin-top: 24px; } .category-tabs { margin-top: 32px; gap: 20px; } .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; } .menu-card { min-height: 242px; } .food-image { height: 110px; } .card-content { padding: 11px; } .card-content h3 { font-size: 15px; } .card-content p { font-size: 10px; } .ticket-header, .order-list, .ticket-footer { padding-left: 20px; padding-right: 20px; } .order-modes { margin-left: 20px; margin-right: 20px; } .guest-picker { margin-left: 20px; margin-right: 20px; } .settings-modal { max-height: 95vh; } .settings-heading, .settings-view { padding-left: 20px; padding-right: 20px; } .settings-tabs { padding: 0 20px; } .form-grid, .add-menu-form { grid-template-columns: 1fr 1fr; } .form-grid label:first-child { grid-column: span 2; } .add-menu-form .save-button { grid-column: span 2; } }
+@media (max-width: 600px) { .topbar { height: 65px; padding: 0 20px; } .service-status, .settings-button span, .sync-status { display: none; } .sync-widget { border-right: none; padding-right: 0; } .topbar-actions { gap: 13px; } .menu-panel { padding: 34px 20px 48px; } .welcome-row { display: block; } .outline-button { margin-top: 24px; } .category-tabs { margin-top: 32px; gap: 20px; } .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; } .menu-card { min-height: 242px; } .food-image { height: 110px; } .card-content { padding: 11px; } .card-content h3 { font-size: 15px; } .card-content p { font-size: 10px; } .ticket-header, .order-list, .ticket-footer { padding-left: 20px; padding-right: 20px; } .order-modes { margin-left: 20px; margin-right: 20px; } .guest-picker { margin-left: 20px; margin-right: 20px; } .settings-modal { max-height: 95vh; } .settings-heading, .settings-view { padding-left: 20px; padding-right: 20px; } .settings-tabs { padding: 0 20px; } .form-grid, .add-menu-form { grid-template-columns: 1fr 1fr; } .form-grid label:first-child { grid-column: span 2; } .add-menu-form .save-button { grid-column: span 2; } }
