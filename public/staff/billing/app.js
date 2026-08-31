@@ -583,7 +583,12 @@ function buildDefaultRolePermissions() {
   // everything except edit prices / delete menu items (that was Super Admin
   // only); User couldn't open Settings at all. Nothing changes until Super
   // Admin actually flips a toggle.
+  // Booking Management carries guest phone numbers/emails, so it's the one
+  // page that's Super-Admin-only by default even for Admin — Super Admin
+  // grants it to a role explicitly via the toggle below, same as any other
+  // page permission.
   const adminDenied = { "menu-settings": ["edit-price", "delete"], users: ["lock"] };
+  const adminViewDenied = ["bookings"];
   const perms = { Admin: {}, User: {} };
   MANAGED_SETTINGS_PAGES.forEach(page => {
     const adminActions = {};
@@ -592,7 +597,7 @@ function buildDefaultRolePermissions() {
       adminActions[action.key] = !(adminDenied[page.key] || []).includes(action.key);
       userActions[action.key] = false;
     });
-    perms.Admin[page.key] = { view: true, actions: adminActions };
+    perms.Admin[page.key] = { view: !adminViewDenied.includes(page.key), actions: adminActions };
     perms.User[page.key] = { view: false, actions: userActions };
   });
   return perms;
@@ -615,6 +620,16 @@ function getRolePermissions() {
       actions["edit-printer"] = actions["edit-workflow"] = actions["edit-upi"] = actions.edit;
       delete actions.edit;
     });
+    saveRolePermissions(stored);
+  }
+  // Booking Management used to default to visible for Admin like every
+  // other page; it now defaults to Super-Admin-only since it carries
+  // guest contact details. One-time correction for anyone who already
+  // had permissions saved before this changed — only touches it if it's
+  // still sitting at the old default (untouched by an explicit choice).
+  if (stored.Admin.bookings && stored.Admin.bookings.view === true && !stored.__bookingsViewDefaultMigrated) {
+    stored.Admin.bookings.view = false;
+    stored.__bookingsViewDefaultMigrated = true;
     saveRolePermissions(stored);
   }
   return stored;
