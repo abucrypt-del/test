@@ -8,7 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Pirata+One&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=19" />
+  <link rel="stylesheet" href="styles.css?v=20" />
+  <link rel="manifest" href="manifest.json" />
   <script>
     // Server session is authoritative. sessionStorage only carries display
     // metadata for this device and is never an access control — a forged
@@ -19,9 +20,17 @@
         const xhr = new XMLHttpRequest();
         xhr.open("GET", "/api/auth/session", false);
         xhr.send(null);
+        // A real response from the server is authoritative — a non-200
+        // here means the server explicitly says this session is invalid.
         if (xhr.status !== 200) window.location.replace("/staff/billing/");
       } catch {
-        window.location.replace("/staff/billing/");
+        // xhr.send() throws when the request never reached the server at
+        // all (offline, connection drop) — there's no real answer either
+        // way, not a "no". Don't treat "couldn't ask" the same as "the
+        // answer was no": let the already-authenticated local session
+        // continue instead of kicking staff back to login mid-shift just
+        // because the connection dropped. The server check still runs
+        // (and still enforces) the moment connectivity returns.
       }
     })();
   </script>
@@ -348,6 +357,20 @@
     })();
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="app.js?v=32"></script>
+  <script src="app.js?v=33"></script>
+  <script>
+    // Registers the offline app-shell cache. Never touches /api/ calls (see
+    // service-worker.js) — orders, sales, sync, and login behave exactly as
+    // before this existed, online or offline.
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js", { scope: "/staff/billing/" }).catch(() => {
+          // Offline on first-ever visit before anything is cached yet, or
+          // the browser doesn't support it — the app still works normally
+          // online either way, this only adds offline resilience.
+        });
+      });
+    }
+  </script>
 </body>
 </html>

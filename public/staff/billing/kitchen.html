@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json" />
   <style>
     @font-face { font-family: "Font02"; src: url("font 02.ttf") format("truetype"); font-weight: 400 900; font-style: normal; font-display: swap; }
     :root { --ink:#f8f4ea; --muted:#a9b1a3; --paper:#18231e; --panel:#213029; --line:#33463b; --gold:#e0aa56; --coral:#ce6a49; }
@@ -157,6 +158,12 @@
     document.querySelector("#clock").textContent = new Date().toLocaleString([], { weekday:"long", hour:"2-digit", minute:"2-digit" });
     render();
     setInterval(render, 3000);
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js", { scope: "/staff/billing/" }).catch(() => {});
+      });
+    }
   </script>
 </body>
 </html>

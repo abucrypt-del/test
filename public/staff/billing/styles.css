@@ -322,7 +322,7 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 .layout-editor-controls .save-button { align-self: flex-start; margin-top: 4px; }
 .layout-editor-preview { display: flex; justify-content: center; }
 .receipt-preview { width: 210px; padding: 12px 10px; background: white; border: 1px solid var(--line); border-radius: 3px; box-shadow: 0 8px 20px rgba(45,41,36,.1); font: 10px/1.4 monospace; color: #111; }
-.receipt-preview img { width: 100%; max-height: 34px; object-fit: contain; filter: invert(1); mix-blend-mode: multiply; margin-bottom: 4px; }
+.receipt-preview img { width: 100%; max-height: 34px; object-fit: contain; mix-blend-mode: multiply; margin-bottom: 4px; }
 .receipt-preview h1, .receipt-preview h2 { margin: 4px 0; font: 700 12px/1.2 monospace; }
 .receipt-preview p { margin: 3px 0; }
 .receipt-preview hr { border: 0; border-top: 1px dashed #999; margin: 6px 0; }
