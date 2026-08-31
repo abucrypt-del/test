@@ -1045,12 +1045,12 @@ function renderPrintSheet(type, isReprint = false, itemsOverride = null, isAddit
   }
   const orderTypeLine = printSettings.showOrderType ? `<div class="print-line"><span>Order type</span><span>${safe(orderMode)}</span></div>` : "";
   const dateLine = `<div class="print-line"><span>Date</span><span>${new Date().toLocaleString()}</span></div>`;
-  // Takeaway receipts (and the standalone token slip) lead with the
-  // token in large bold type — that's the number the guest actually
-  // needs to spot at pickup — instead of the generic word "RECEIPT".
+  // Only the standalone token slip (printed before payment) leads with
+  // the big token number — the actual receipt at handover says
+  // "RECEIPT" like any other, with the token as a normal field below.
   const headerTitle = type === "KOT"
     ? (isAdditional ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT")
-    : (activeCabin && activeCabin.type === "takeaway"
+    : (type === "token" && activeCabin && activeCabin.type === "takeaway"
         ? `<span style="font-size:32px;font-weight:700;">#${safe(activeCabin.token)}</span>`
         : "RECEIPT");
   // The token slip is just the token — no items, no pricing, printed
