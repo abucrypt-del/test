@@ -1039,7 +1039,15 @@ function renderPrintSheet(type, isReprint = false, itemsOverride = null, isAddit
   }
   const orderTypeLine = printSettings.showOrderType ? `<div class="print-line"><span>Order type</span><span>${safe(orderMode)}</span></div>` : "";
   const dateLine = `<div class="print-line"><span>Date</span><span>${new Date().toLocaleString()}</span></div>`;
-  const html = `<div style="text-align:${printSettings.headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}${printSettings.address ? `<p>${safe(printSettings.address)}</p>` : ""}${printSettings.phone ? `<p>Ph: ${safe(printSettings.phone)}</p>` : ""}${printSettings.whatsapp ? `<p>WhatsApp: ${safe(printSettings.whatsapp)}</p>` : ""}</div><hr><div style="text-align:center"><h2>${type === "KOT" ? (isAdditional ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT") : "RECEIPT"}</h2>${receiptType ? `<p style="font-weight:bold;">${receiptType}</p>` : ""}</div>${guestInfo}${orderTypeLine}${locationLine}${orderNumberLine}${dateLine}<hr>${items.map(item => `<div class="print-line"><span>${item.quantity} x ${safe(item.name)}</span><strong>${money(item.price * item.quantity)}</strong></div>`).join("")}${type === "KOT" ? "" : `<hr><div class="print-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>${discountAmount > 0 ? `<div class="print-line"><span>Discount</span><strong>-${money(discountAmount)}</strong></div>` : ""}${printSettings.showTax ? `<div class="print-line"><span>Tax (${printSettings.taxRatePercent}%)</span><strong>${money(tax)}</strong></div>` : ""}<div class="print-line print-total"><span>Total</span><strong>${money(total)}</strong></div>`}${printSettings.footer ? `<hr><div style="text-align:${printSettings.footerAlign}"><p>${safe(printSettings.footer)}</p></div>` : ""}`;
+  // Takeaway receipts lead with the token in large type — that's the
+  // number the guest actually needs to spot at pickup — instead of the
+  // generic word "RECEIPT".
+  const headerTitle = type === "KOT"
+    ? (isAdditional ? "ADDITIONAL ITEMS / KOT" : "KITCHEN ORDER / KOT")
+    : (activeCabin && activeCabin.type === "takeaway"
+        ? `<span style="font-size:32px;">#${safe(activeCabin.token)}</span>`
+        : "RECEIPT");
+  const html = `<div style="text-align:${printSettings.headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}${printSettings.address ? `<p>${safe(printSettings.address)}</p>` : ""}${printSettings.phone ? `<p>Ph: ${safe(printSettings.phone)}</p>` : ""}${printSettings.whatsapp ? `<p>WhatsApp: ${safe(printSettings.whatsapp)}</p>` : ""}</div><hr><div style="text-align:center"><h2>${headerTitle}</h2>${receiptType ? `<p style="font-weight:bold;">${receiptType}</p>` : ""}</div>${guestInfo}${orderTypeLine}${locationLine}${orderNumberLine}${dateLine}<hr>${items.map(item => `<div class="print-line"><span>${item.quantity} x ${safe(item.name)}</span><strong>${money(item.price * item.quantity)}</strong></div>`).join("")}${type === "KOT" ? "" : `<hr><div class="print-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>${discountAmount > 0 ? `<div class="print-line"><span>Discount</span><strong>-${money(discountAmount)}</strong></div>` : ""}${printSettings.showTax ? `<div class="print-line"><span>Tax (${printSettings.taxRatePercent}%)</span><strong>${money(tax)}</strong></div>` : ""}<div class="print-line print-total"><span>Total</span><strong>${money(total)}</strong></div>`}${printSettings.footer ? `<hr><div style="text-align:${printSettings.footerAlign}"><p>${safe(printSettings.footer)}</p></div>` : ""}`;
   document.querySelector("#print-sheet").innerHTML = html;
   if (type === "bill" && !isReprint) {
     printedBills.push({ html: html.replace("--- ORIGINAL ---", "--- COPY ---"), createdAt: new Date().toISOString(), guest: currentOrderGuestName, phone: currentOrderGuestPhone, total, originalHtml: html });
@@ -1166,9 +1174,9 @@ function finishPayment() {
     saveCabins();
     renderOrder();
     renderCabinTabs();
-    // Customer-facing receipt (token, items, price, total) — not a
-    // kitchen KOT — so the guest has a printed record of a paid takeaway.
-    printTicket("bill");
+    // Receipt prints later, at handover (see closeCabin) — not here at
+    // pay time, so it comes off the printer when the guest actually
+    // collects the order.
     showToast(`Payment received by ${paymentMethod}. Sent to kitchen — starting next ticket.`);
     createTakeawayTicket();
     return;
