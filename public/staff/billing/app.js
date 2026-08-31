@@ -346,10 +346,13 @@ function renderCabinTabs() {
   const activeCabin = getCabinData(currentCabinId);
   if (currentCabinLabel && activeCabin) currentCabinLabel.textContent = activeCabin.name;
   if (cabinBillingName && activeCabin) cabinBillingName.textContent = activeCabin.name;
-  // Take Away sidebar only makes sense while working a takeaway ticket —
-  // hide it whenever a Dine In cabin is the active selection.
+  // Take Away sidebar (Board + ticket tabs) shows while working a
+  // takeaway ticket, or whenever there are pending takeaway orders to
+  // switch to — hidden only when neither is true, so it's not empty
+  // clutter on an ordinary Dine In cabin with nothing takeaway pending.
   const takeawaySection = document.querySelector(".takeaway-section");
-  if (takeawaySection) takeawaySection.hidden = !activeCabin || activeCabin.type !== "takeaway";
+  const isTakeawayActive = !!activeCabin && activeCabin.type === "takeaway";
+  if (takeawaySection) takeawaySection.hidden = !isTakeawayActive && takeawayTickets.length === 0;
 }
 
 function renderTakeawayBoard() {
