@@ -176,15 +176,20 @@ export async function onRequestGet({ request, env }) {
   }));
 
   const saleRows = await db.prepare("SELECT * FROM sales ORDER BY id").all();
-  const sales = [];
-  for (const row of saleRows.results) {
-    const itemRows = await db.prepare("SELECT name, price, quantity FROM sale_items WHERE sale_id = ?1").bind(row.id).all();
-    sales.push({
-      id: row.legacy_id, total: row.total, method: row.method, mode: row.mode,
-      paidUpfront: row.paid_upfront ? true : undefined, createdAt: row.created_at, user: row.user_name,
-      items: itemRows.results.map(item => ({ name: item.name, price: item.price, quantity: item.quantity })),
-    });
+  // One query for every sale's line items instead of one query per sale
+  // (that N+1 pattern is what was pushing this endpoint over the Workers
+  // CPU time limit as the sales table grew from real daily use).
+  const allItemRows = await db.prepare("SELECT sale_id, name, price, quantity FROM sale_items").all();
+  const itemsBySaleId = new Map();
+  for (const item of allItemRows.results) {
+    if (!itemsBySaleId.has(item.sale_id)) itemsBySaleId.set(item.sale_id, []);
+    itemsBySaleId.get(item.sale_id).push({ name: item.name, price: item.price, quantity: item.quantity });
   }
+  const sales = saleRows.results.map(row => ({
+    id: row.legacy_id, total: row.total, method: row.method, mode: row.mode,
+    paidUpfront: row.paid_upfront ? true : undefined, createdAt: row.created_at, user: row.user_name,
+    items: itemsBySaleId.get(row.id) || [],
+  }));
 
   // The users table may not be migrated on this environment yet — don't let
   // that take down the rest of the sync (menu/bookings/sales/etc).
