@@ -1,11 +1,24 @@
 name = "alyazi-billing-app"
 compatibility_date = "2026-08-25"
 
+# The real D1 database ID and KV namespace ID are intentionally NOT stored
+# here — this file is in a public repo. Production Pages Functions get their
+# actual bindings from the Cloudflare Pages dashboard directly (Settings ->
+# Functions -> Production bindings), which is configured independently of
+# this file and already matches what used to be hardcoded here.
+#
+# The "Apply D1 schema" CI step references the database by name
+# ("alyazi-billing-db") directly in its command, resolved via the Cloudflare
+# API using the account's own token — it does not read the id below either.
+#
+# For local `wrangler pages dev` emulation only: these placeholder values
+# are fine as-is since local dev never contacts real Cloudflare resources
+# unless you explicitly pass --remote.
 [[env.production.kv_namespaces]]
-id = "REDACTED-KV-NAMESPACE-ID"
+id = "local-dev-placeholder"
 binding = "AUTH_KV"
 
 [[env.production.d1_databases]]
 binding = "BILLING_DB"
 database_name = "alyazi-billing-db"
-database_id = "REDACTED-D1-DATABASE-ID"
+database_id = "local-dev-placeholder"

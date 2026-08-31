@@ -2,3 +2,8 @@
 .vscode/
 .DS_Store
 .wrangler/
+# Real customer data / password hashes exported for backup purposes —
+# must never reach the public GitHub repo.
+data_export/
+*.sql
+!schema.sql
