@@ -2090,16 +2090,29 @@ applyPrintPaperSize();
 const SYNC_DB_NAME = "alyazi-sync";
 const SYNC_STORE_NAME = "snapshots";
 const SYNC_RECORD_KEY = "latest";
-let lastSyncedSnapshot = null;
+let lastSyncedValues = new Map();
 let syncInFlight = false;
 
+// Change detection used to JSON.stringify this entire object every 6
+// seconds forever just to compare it against the last one — cost that
+// scaled with total accumulated history (months of sales/receipts/logs),
+// paid even on a completely idle screen. Comparing each key's raw string
+// against what was last synced is just as correct — localStorage returns
+// the same string reference when a value hasn't changed, so this is a
+// cheap reference check for nearly every key on nearly every tick — and
+// only costs real work for the handful of keys that actually changed.
 function collectSyncSnapshot() {
   const data = {};
+  let changed = false;
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key && key.startsWith("alyazi-")) data[key] = localStorage.getItem(key);
+    if (!key || !key.startsWith("alyazi-")) continue;
+    const value = localStorage.getItem(key);
+    data[key] = value;
+    if (lastSyncedValues.get(key) !== value) changed = true;
   }
-  return data;
+  if (!changed && Object.keys(data).length !== lastSyncedValues.size) changed = true;
+  return { data, changed };
 }
 
 function openSyncDb() {
@@ -2214,13 +2227,12 @@ async function pullLiveDataFromCloud() {
 
 async function runSync({ manual = false } = {}) {
   if (syncInFlight) return;
-  const snapshot = collectSyncSnapshot();
-  const snapshotString = JSON.stringify(snapshot);
+  const { data: snapshot, changed } = collectSyncSnapshot();
   // A push (this device's own data) only happens when something actually
   // changed, or the user forced it — but the live pulls below must always
   // run every tick regardless, or an idle screen with no local changes
   // would never notice a new web booking / reset request.
-  const hasChanges = manual || snapshotString !== lastSyncedSnapshot;
+  const hasChanges = manual || changed;
 
   syncInFlight = true;
   const syncButton = document.querySelector("#sync-button");
@@ -2231,7 +2243,7 @@ async function runSync({ manual = false } = {}) {
     const updatedAt = Date.now();
     if (hasChanges) {
       await saveSnapshotLocally(snapshot, updatedAt);
-      lastSyncedSnapshot = snapshotString;
+      lastSyncedValues = new Map(Object.entries(snapshot));
       try {
         await saveSnapshotToCloud(snapshot, updatedAt);
       } catch (err) {
