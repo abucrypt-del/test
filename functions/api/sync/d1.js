@@ -147,8 +147,19 @@ export async function onRequestPost({ request, env }) {
     return json({ ok: false, error: "invalid_body" }, 400);
   }
   const db = env.BILLING_DB;
-  await upsertMenuItems(db, body.data);
-  await upsertCategories(db, body.data);
+  // This generic sync path only checks "is this a logged-in staff member",
+  // not their role — the per-page permission checks (menu edit, price edit,
+  // etc.) all live client-side in app.js. Menu/category content is rendered
+  // straight into innerHTML elsewhere in the app, so a "User" role account
+  // (the default, lowest-privilege role — no menu access by default) being
+  // able to write here directly, bypassing the UI entirely, would be a
+  // stored-XSS-to-anyone's-session hole, not just an unauthorized edit. The
+  // default role permissions never grant "User" menu-write actions, so this
+  // costs no legitimate capability.
+  if (staff.role !== "User") {
+    await upsertMenuItems(db, body.data);
+    await upsertCategories(db, body.data);
+  }
   await upsertBookings(db, body.data);
   await upsertSales(db, body.data);
   await upsertResetRequests(db, body.data);

@@ -24,7 +24,9 @@ let menuItems = parseNonEmpty(localStorage.getItem("alyazi-menu-en-v6")) || [
   { id: 18, name: "Extra Mutton", description: "Extra serving of slow-cooked mutton", price: 314, category: "Extras", image: "extra mutton 01.png" },
   { id: 19, name: "Bucket Small", description: "Small serving of mandi rice", price: 39, category: "Extras", image: "BIgbucket 01.jpeg" },
   { id: 20, name: "Bucket Big", description: "Large serving of mandi rice", price: 49, category: "Extras", image: "BIgbucket 01.jpeg" },
-  { id: 21, name: "Extra Mayonnaise", description: "Extra side of mayonnaise", price: 20, category: "Extras", image: "mayonnaise.jpeg" }
+  { id: 21, name: "Extra Mayonnaise", description: "Extra side of mayonnaise", price: 20, category: "Extras", image: "mayonnaise.jpeg" },
+  { id: 22, name: "Extra Mayonnaise Medium", description: "Medium side of mayonnaise", price: 30, category: "Extras", image: "mayonnaise.jpeg" },
+  { id: 23, name: "Extra Mayonnaise Large", description: "Large side of mayonnaise", price: 40, category: "Extras", image: "mayonnaise.jpeg" }
 ];
 // Every menu item gets a short voice code ("01", "02", ...) so staff can add
 // it by number instead of speaking the full name. Existing items keep
@@ -493,18 +495,20 @@ const escapeHtml = value => String(value).replace(/&/g, "&amp;").replace(/</g, "
 
 function renderMenu(category = "All") {
   const visible = category === "All" ? menuItems : menuItems.filter(item => item.category === category);
+  // Menu item fields are staff-editable data, not hardcoded copy — escape
+  // them like any other user-controllable string before it hits innerHTML.
   menuGrid.innerHTML = visible.map((item, index) => `
     <article class="menu-card" style="animation-delay: ${index * 35}ms">
-      <div class="food-image" style="background-image: url('${item.image}')">${item.badge ? `<span class="badge">${item.badge}</span>` : ""}<span class="menu-code-badge" title="Say this code to add it by voice">#${item.code}</span></div>
+      <div class="food-image" style="background-image: url('${escapeHtml(item.image)}')">${item.badge ? `<span class="badge">${escapeHtml(item.badge)}</span>` : ""}<span class="menu-code-badge" title="Say this code to add it by voice">#${escapeHtml(item.code)}</span></div>
       <div class="card-content">
-        <h3>${item.name}</h3><p>${item.description}</p>
-        <div class="card-bottom"><span class="price">${money(item.price)}</span><button class="add-button" data-add="${item.id}" aria-label="Add ${item.name}">+</button></div>
+        <h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.description)}</p>
+        <div class="card-bottom"><span class="price">${money(item.price)}</span><button class="add-button" data-add="${item.id}" aria-label="Add ${escapeHtml(item.name)}">+</button></div>
       </div>
     </article>`).join("");
 }
 
 function renderMenuTable() {
-  document.querySelector("#menu-table-body").innerHTML = menuItems.map(item => `<tr><td>${item.name}</td><td><span class="table-category">${item.category}</span></td><td><label class="price-editor"><span>₹</span><input data-price-id="${item.id}" value="${item.price.toFixed(2)}" type="number" min="0" step="0.01" aria-label="Price for ${item.name}"></label></td><td><div class="image-input-group"><input class="image-editor" data-image-id="${item.id}" type="text" placeholder="Image URL or upload" value="${item.image && !item.image.startsWith('data:') ? item.image : ''}" aria-label="Image URL for ${item.name}"><label class="file-upload-btn"><span>📁</span><input type="file" data-file-upload="${item.id}" accept="image/*" style="display:none;" aria-label="Upload image for ${item.name}"></label></div></td><td><button class="delete-menu" data-delete-id="${item.id}" aria-label="Delete ${item.name}">×</button></td></tr>`).join("");
+  document.querySelector("#menu-table-body").innerHTML = menuItems.map(item => `<tr><td>${escapeHtml(item.name)}</td><td><span class="table-category">${escapeHtml(item.category)}</span></td><td><label class="price-editor"><span>₹</span><input data-price-id="${item.id}" value="${item.price.toFixed(2)}" type="number" min="0" step="0.01" aria-label="Price for ${escapeHtml(item.name)}"></label></td><td><div class="image-input-group"><input class="image-editor" data-image-id="${item.id}" type="text" placeholder="Image URL or upload" value="${item.image && !item.image.startsWith('data:') ? escapeHtml(item.image) : ''}" aria-label="Image URL for ${escapeHtml(item.name)}"><label class="file-upload-btn"><span>📁</span><input type="file" data-file-upload="${item.id}" accept="image/*" style="display:none;" aria-label="Upload image for ${escapeHtml(item.name)}"></label></div></td><td><button class="delete-menu" data-delete-id="${item.id}" aria-label="Delete ${escapeHtml(item.name)}">×</button></td></tr>`).join("");
 }
 
 function saveMenu() {
@@ -778,7 +782,11 @@ function applyPrintPaperSize() {
     styleEl.id = "dynamic-print-size";
     document.head.appendChild(styleEl);
   }
-  const pageRule = preset.page ? `@page { size: ${preset.page}; margin: 0; }` : "";
+  // Even in "auto" (defer page size to the printer driver), still zero the
+  // page margin ourselves — without this, "auto" got the browser's own
+  // default page margin (often 10mm+ per side) on top of whatever length
+  // the driver picked, which on a narrow 80mm roll is a lot of wasted paper.
+  const pageRule = `@page { ${preset.page ? `size: ${preset.page}; ` : ""}margin: 0; }`;
   styleEl.textContent = `@media print { ${pageRule} body.print-ticket #print-sheet { width: ${preset.printWidth}; } }`;
 }
 
@@ -965,7 +973,7 @@ function renderOrder() {
     orderList.innerHTML = `<div class="empty-ticket"><div class="empty-icon">＋</div><strong>Your ticket is empty</strong><p>Select an item from the menu<br>to start this order.</p></div>`;
   } else {
     orderList.innerHTML = [...order.values()].map(item => `
-      <div class="order-item"><div><div class="order-name">${item.name}</div><div class="order-controls"><button data-decrease="${item.id}">−</button><span>${item.quantity}</span><button data-increase="${item.id}">＋</button><button class="remove-item" data-remove="${item.id}">Remove</button></div></div><span class="order-price">${money(item.price * item.quantity)}</span></div>`).join("");
+      <div class="order-item"><div><div class="order-name">${escapeHtml(item.name)}</div><div class="order-controls"><button data-decrease="${item.id}">−</button><span>${item.quantity}</span><button data-increase="${item.id}">＋</button><button class="remove-item" data-remove="${item.id}">Remove</button></div></div><span class="order-price">${money(item.price * item.quantity)}</span></div>`).join("");
   }
   const subtotal = [...order.values()].reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = Math.min(discountType === "amount" ? discountValue : subtotal * (discountValue / 100), subtotal);
@@ -2168,6 +2176,23 @@ async function pullLiveDataFromCloud() {
         saveCancellationLogs();
         renderCancellationLogs();
       }
+    }
+  }
+
+  // Menu edits only ever landed on whichever device made them — every other
+  // device's local menu was seeded once, long ago, and nothing ever pulled
+  // later additions back down. Merge-by-id, same as bookings below: only
+  // adds items missing locally, never touches/overwrites an existing one
+  // (an admin's own unsynced edit on this device should never be clobbered
+  // by a stale server copy).
+  const remoteMenuRaw = result?.data?.["alyazi-menu-en-v6"];
+  if (remoteMenuRaw) {
+    const remoteMenu = JSON.parse(remoteMenuRaw);
+    const localIds = new Set(menuItems.map(item => item.id));
+    const fresh = remoteMenu.filter(item => !localIds.has(item.id));
+    if (fresh.length) {
+      menuItems = [...menuItems, ...fresh];
+      saveMenu();
     }
   }
 
