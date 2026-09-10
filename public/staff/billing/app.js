@@ -2,7 +2,7 @@ function parseNonEmpty(raw) {
   const parsed = JSON.parse(raw || "null");
   return Array.isArray(parsed) && parsed.length === 0 ? null : parsed;
 }
-let menuCategories = parseNonEmpty(localStorage.getItem("alyazi-categories-v1")) || ["Mandi", "Chicken Mandi", "BBQ", "Extras"];
+let menuCategories = parseNonEmpty(localStorage.getItem("alyazi-categories-v1")) || ["Mandi", "Chicken Mandi", "BBQ", "Extras", "Beverages"];
 let menuItems = parseNonEmpty(localStorage.getItem("alyazi-menu-en-v6")) || [
   { id: 1, name: "Mutton Yemeni Mandi - 1 Person", description: "Slow-cooked mutton, fragrant basmati rice", price: 395, category: "Mandi", badge: "Signature", image: "mutton 02.jpeg" },
   { id: 2, name: "Mutton Yemeni Mandi - 2 Person", description: "Slow-cooked mutton, fragrant basmati rice", price: 790, category: "Mandi", image: "mutton 02.jpeg" },
@@ -26,7 +26,8 @@ let menuItems = parseNonEmpty(localStorage.getItem("alyazi-menu-en-v6")) || [
   { id: 20, name: "Bucket Big", description: "Large serving of mandi rice", price: 49, category: "Extras", image: "BIgbucket 01.jpeg" },
   { id: 21, name: "Extra Mayonnaise", description: "Extra side of mayonnaise", price: 20, category: "Extras", image: "mayonnaise.jpeg" },
   { id: 22, name: "Extra Mayonnaise Medium", description: "Medium side of mayonnaise", price: 30, category: "Extras", image: "mayonnaise.jpeg" },
-  { id: 23, name: "Extra Mayonnaise Large", description: "Large side of mayonnaise", price: 40, category: "Extras", image: "mayonnaise.jpeg" }
+  { id: 23, name: "Extra Mayonnaise Large", description: "Large side of mayonnaise", price: 40, category: "Extras", image: "mayonnaise.jpeg" },
+  { id: 24, name: "Cool Drinks 500Ml", description: "Chilled soft drink, 500ml", price: 40, category: "Beverages", image: "beverages.jpeg" }
 ];
 // Every menu item gets a short voice code ("01", "02", ...) so staff can add
 // it by number instead of speaking the full name. Existing items keep
@@ -2189,6 +2190,20 @@ async function pullLiveDataFromCloud() {
         saveCancellationLogs();
         renderCancellationLogs();
       }
+    }
+  }
+
+  // Same gap as menu items below, for the category list itself — a new
+  // category added on one device never reached any other device.
+  const remoteCategoriesRaw = result?.data?.["alyazi-categories-v1"];
+  if (remoteCategoriesRaw) {
+    const remoteCategories = JSON.parse(remoteCategoriesRaw);
+    const fresh = remoteCategories.filter(name => !menuCategories.includes(name));
+    if (fresh.length) {
+      menuCategories = [...menuCategories, ...fresh];
+      saveCategories();
+      renderCategoryTabs();
+      renderCategorySelect();
     }
   }
 
