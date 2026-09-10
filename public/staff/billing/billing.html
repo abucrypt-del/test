@@ -360,8 +360,36 @@
       }
     })();
   </script>
+  <script>
+    // app.js's very first line trusts sessionStorage alone to know "am I
+    // logged in" — but sessionStorage is wiped every time this page starts
+    // a fresh browsing context, while the server's login cookie persists
+    // (that's the whole point of the Electron app's persistent session
+    // partition: stay logged in across app restarts). Every relaunch, that
+    // mismatch bounced this page straight back to index.html for having no
+    // cached user, which then found the still-valid cookie and sent it
+    // right back here — an infinite index.html <-> billing.html loop that
+    // looked like the app flickering. Synchronous XHR so it resolves
+    // before app.js's own (synchronous) currentUser check runs below.
+    (function restoreSessionIfMissing() {
+      if (sessionStorage.getItem("alyazi-current-user")) return;
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "/api/auth/session", false);
+        xhr.send(null);
+        if (xhr.status !== 200) return;
+        var resp = JSON.parse(xhr.responseText);
+        if (resp && resp.ok && resp.user) {
+          sessionStorage.setItem("alyazi-current-user", JSON.stringify(resp.user));
+        }
+      } catch (err) {
+        // No network / bad response — app.js falls back to its normal
+        // "no session, go to login" handling.
+      }
+    })();
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="app.js?v=37"></script>
+  <script src="app.js?v=38"></script>
   <script>
     // Registers the offline app-shell cache. Never touches /api/ calls (see
     // service-worker.js) — orders, sales, sync, and login behave exactly as
