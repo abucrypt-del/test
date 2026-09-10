@@ -102,6 +102,22 @@ async function upsertSales(db, snapshot) {
   }
 }
 
+async function upsertCancellationLogs(db, snapshot) {
+  const logs = safeParse(snapshot["alyazi-cancellation-logs-v1"]);
+  if (!Array.isArray(logs)) return;
+  // Append-only audit trail — an entry never changes after it's written,
+  // so ON CONFLICT just no-ops instead of re-writing it.
+  const stmts = logs
+    .filter(log => log && log.id)
+    .map(log => db.prepare(
+      `INSERT INTO cancellation_logs (legacy_id, action, details, user_name, role, created_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+       ON CONFLICT(legacy_id) DO NOTHING`
+    ).bind(log.id, log.action ?? "", log.details ?? "", log.userName ?? "", log.role ?? "",
+      log.createdAt ?? new Date().toISOString()));
+  if (stmts.length) await db.batch(stmts);
+}
+
 // Staff accounts are intentionally NOT written through this generic sync
 // path anymore — user creation/lock/delete/password changes all go through
 // the dedicated /api/users* and /api/auth/* endpoints, which hash passwords
@@ -136,6 +152,7 @@ export async function onRequestPost({ request, env }) {
   await upsertBookings(db, body.data);
   await upsertSales(db, body.data);
   await upsertResetRequests(db, body.data);
+  await upsertCancellationLogs(db, body.data);
   return json({ ok: true, updatedAt: Date.now() });
 }
 
@@ -212,6 +229,18 @@ export async function onRequestGet({ request, env }) {
     id: row.legacy_id, userId: row.user_id, userName: row.user_name, role: row.role, requestedAt: row.requested_at,
   }));
 
+  // Cancellation logs are for Super Admin's eyes only — unlike the rest of
+  // this endpoint's data, withhold them server-side rather than trusting
+  // the client to just not show the Logs tab to everyone else.
+  let cancellationLogs = [];
+  if (staff.role === "Super Admin") {
+    const logRows = await db.prepare("SELECT * FROM cancellation_logs ORDER BY id DESC").all();
+    cancellationLogs = logRows.results.map(row => ({
+      id: row.legacy_id, action: row.action, details: row.details || "",
+      userName: row.user_name || "", role: row.role || "", createdAt: row.created_at,
+    }));
+  }
+
   // An empty array is a real JS value, not "no data" — sending "[]" would
   // make the client think D1 has an authoritative (empty) answer and skip
   // its own seed defaults. Send null instead when a table has nothing yet.
@@ -225,6 +254,7 @@ export async function onRequestGet({ request, env }) {
       "alyazi-bookings-v1": orNull(bookings),
       "alyazi-sales-v1": orNull(sales),
       "alyazi-users-v1": orNull(users),
+      "alyazi-cancellation-logs-v1": orNull(cancellationLogs),
       "alyazi-password-reset-requests": orNull(resetRequests),
     },
   });

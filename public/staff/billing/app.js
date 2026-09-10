@@ -94,6 +94,22 @@ let currentOrderGuestPhone = "";
 let printedBills = JSON.parse(localStorage.getItem("alyazi-printed-bills") || "[]");
 let sales = JSON.parse(localStorage.getItem("alyazi-sales-v1") || "[]");
 let reportExportSales = [];
+let cancellationLogs = JSON.parse(localStorage.getItem("alyazi-cancellation-logs-v1") || "[]");
+function saveCancellationLogs() {
+  localStorage.setItem("alyazi-cancellation-logs-v1", JSON.stringify(cancellationLogs));
+}
+// Audit trail for ticket/booking cancellations — Settings > Logs, Super
+// Admin only. Logged regardless of who cancels (including Super Admin
+// themself) so the trail is complete, but only Super Admin can ever see it.
+function logCancellation(action, details) {
+  cancellationLogs.unshift({
+    id: Date.now(), action, details,
+    userName: currentUser.name, role: currentUser.role,
+    createdAt: new Date().toISOString(),
+  });
+  saveCancellationLogs();
+  if (currentUser.role === "Super Admin") renderCancellationLogs();
+}
 
 let currentCabinId = 1;
 const makeCabin = (id, name, orderMode, type = "cabin", token = null) => ({
@@ -408,6 +424,9 @@ function cancelTakeawayTicket(cabinId) {
     return;
   }
   const isActive = cabinId === currentCabinId;
+  const itemCount = Array.from(cabin.order.values()).reduce((sum, item) => sum + item.quantity, 0);
+  const itemTotal = Array.from(cabin.order.values()).reduce((sum, item) => sum + item.price * item.quantity, 0);
+  logCancellation("Ticket cancelled", `${cabin.name} — ${itemCount} item${itemCount === 1 ? "" : "s"}, ${money(itemTotal)}`);
   cabins = cabins.filter(c => c.id !== cabinId);
   saveCabins();
   showToast(`${cabin.name} cancelled`);
@@ -1511,6 +1530,19 @@ function renderReceiptHistory() {
   });
 }
 
+function renderCancellationLogs() {
+  const list = document.querySelector("#cancellation-logs-list");
+  if (!list || currentUser.role !== "Super Admin") return;
+  if (cancellationLogs.length === 0) {
+    list.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--muted);">No cancellations yet</div>`;
+    return;
+  }
+  list.innerHTML = cancellationLogs.map(log => {
+    const date = new Date(log.createdAt);
+    return `<div class="receipt-item"><div><strong>${escapeHtml(log.action)}</strong><small>${escapeHtml(log.details || "")}</small></div><div class="receipt-total" style="font-size:10px;color:var(--muted);font-weight:600;">${escapeHtml(log.userName)} (${escapeHtml(log.role)})<br>${date.toLocaleString()}</div></div>`;
+  }).join("");
+}
+
 const settingsModal = document.querySelector("#settings-modal");
 function applySettingsAccessForRole() {
   const role = currentUser.role;
@@ -1518,6 +1550,14 @@ function applySettingsAccessForRole() {
   document.querySelectorAll(".settings-tab[data-settings-tab]").forEach(tab => {
     const page = tab.dataset.settingsTab;
     if (page === "guests") return;
+    // Logs is a hard Super Admin-only page, not a delegatable permission —
+    // it exists specifically so cancellations are only ever visible to
+    // Super Admin, so it never goes through the role permissions table.
+    if (page === "logs") {
+      tab.hidden = role !== "Super Admin";
+      if (!tab.hidden && !firstVisibleTab) firstVisibleTab = tab;
+      return;
+    }
     const allowed = hasSettingsPageAccess(role, page);
     tab.hidden = !allowed;
     if (allowed && !firstVisibleTab) firstVisibleTab = tab;
@@ -1540,6 +1580,7 @@ document.querySelectorAll(".settings-tab").forEach(tab => tab.addEventListener("
   if (tab.dataset.settingsTab === "my-sales") renderMySales();
   if (tab.dataset.settingsTab === "receipts") renderReceiptHistory();
   if (tab.dataset.settingsTab === "bookings") renderBookingsList();
+  if (tab.dataset.settingsTab === "logs") renderCancellationLogs();
 }));
 document.querySelectorAll(".report-range").forEach(button => button.addEventListener("click", () => {
   const group = button.parentElement;
@@ -1572,6 +1613,15 @@ document.querySelector("#export-receipts").addEventListener("click", () => {
   const table = `<table><tr>${rows[0].map(cell => `<th>${cell}</th>`).join("")}</tr>${rows.slice(1).map(row => `<tr>${row.map(cell => `<td>${String(cell).replace(/&/g, "&amp;").replace(/</g, "&lt;")}</td>`).join("")}</tr>`).join("")}</table>`;
   const blob = new Blob([`<html><head><meta charset="UTF-8"></head><body>${table}</body></html>`], { type: "application/vnd.ms-excel" });
   const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `alyazi-receipts-${new Date().toISOString().slice(0, 10)}.xls`; link.click(); URL.revokeObjectURL(link.href); showToast("Receipt history exported to Excel");
+});
+document.querySelector("#export-logs")?.addEventListener("click", () => {
+  if (currentUser.role !== "Super Admin") { showToast("You don't have permission to export logs"); return; }
+  if (!cancellationLogs.length) { showToast("No cancellations to export"); return; }
+  const rows = [["Date", "Action", "Details", "Cancelled by", "Role"]];
+  cancellationLogs.forEach(log => rows.push([new Date(log.createdAt).toLocaleString(), log.action, log.details || "", log.userName, log.role]));
+  const table = `<table><tr>${rows[0].map(cell => `<th>${cell}</th>`).join("")}</tr>${rows.slice(1).map(row => `<tr>${row.map(cell => `<td>${String(cell).replace(/&/g, "&amp;").replace(/</g, "&lt;")}</td>`).join("")}</tr>`).join("")}</table>`;
+  const blob = new Blob([`<html><head><meta charset="UTF-8"></head><body>${table}</body></html>`], { type: "application/vnd.ms-excel" });
+  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `alyazi-logs-${new Date().toISOString().slice(0, 10)}.xls`; link.click(); URL.revokeObjectURL(link.href); showToast("Logs exported to Excel");
 });
 document.querySelector("#user-form").addEventListener("submit", async event => {
   event.preventDefault();
@@ -1925,6 +1975,7 @@ document.querySelector("#cancel-reason-form").addEventListener("submit", event =
     saveBookings(bookings);
     renderBookingsList();
     renderCabinTabs();
+    logCancellation("Booking cancelled", `${booking.cabinName} · ${booking.name} — ${reason}`);
     showToast(`${booking.cabinName} booking cancelled`);
   }
   cancelReasonModal.hidden = true;
@@ -1977,6 +2028,7 @@ document.querySelector("#cancel-reminder-booking").addEventListener("click", () 
     saveBookings(bookings);
     renderBookingsList();
     renderCabinTabs();
+    logCancellation("Booking cancelled", `${booking.cabinName} · ${booking.name}`);
     showToast(`${booking.cabinName} booking cancelled`);
   }
   reminderModal.hidden = true;
@@ -2103,6 +2155,18 @@ async function pullLiveDataFromCloud() {
       if (fresh.length) {
         saveResetRequests([...local, ...fresh]);
         renderResetRequests();
+      }
+    }
+
+    const remoteLogsRaw = result?.data?.["alyazi-cancellation-logs-v1"];
+    if (remoteLogsRaw) {
+      const remoteLogs = JSON.parse(remoteLogsRaw);
+      const localIds = new Set(cancellationLogs.map(log => log.id));
+      const fresh = remoteLogs.filter(log => !localIds.has(log.id));
+      if (fresh.length) {
+        cancellationLogs = [...fresh, ...cancellationLogs].sort((a, b) => b.id - a.id);
+        saveCancellationLogs();
+        renderCancellationLogs();
       }
     }
   }

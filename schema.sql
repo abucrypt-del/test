@@ -104,10 +104,24 @@ CREATE TABLE IF NOT EXISTS password_reset_requests (
   requested_at TEXT NOT NULL
 );
 
+-- Audit trail for ticket/booking cancellations, surfaced only to Super
+-- Admin in the Settings > Logs tab so they can see what staff cancelled
+-- across every device, not just their own.
+CREATE TABLE IF NOT EXISTS cancellation_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  legacy_id INTEGER UNIQUE,
+  action TEXT NOT NULL,
+  details TEXT,
+  user_name TEXT,
+  role TEXT,
+  created_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
 CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);
 CREATE INDEX IF NOT EXISTS idx_bookings_datetime ON bookings(datetime);
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
+CREATE INDEX IF NOT EXISTS idx_cancellation_logs_created_at ON cancellation_logs(created_at);
 
 -- Enforces "one active booking per cabin per slot" at the data layer, not
 -- just in application code — two simultaneous requests for the same

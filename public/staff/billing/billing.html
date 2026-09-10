@@ -221,7 +221,7 @@
   <div class="modal-backdrop" id="settings-modal" hidden>
     <section class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <div class="settings-heading"><div><p class="eyebrow">Restaurant control</p><h2 id="settings-title">Settings</h2></div><button class="close-button" id="close-settings" aria-label="Close settings">×</button></div>
-      <div class="settings-tabs"><button class="settings-tab active" data-settings-tab="my-sales">My Sales</button><button class="settings-tab" data-settings-tab="printers">Printers</button><button class="settings-tab" data-settings-tab="menu-settings">Menu & pricing</button><button class="settings-tab" data-settings-tab="users">Users</button><button class="settings-tab" data-settings-tab="sales">Sales reports</button><button class="settings-tab super-admin-only" data-settings-tab="guests" hidden>Guests</button><button class="settings-tab" data-settings-tab="receipts">Receipt History</button><button class="settings-tab" data-settings-tab="bookings">Booking Management</button></div>
+      <div class="settings-tabs"><button class="settings-tab active" data-settings-tab="my-sales">My Sales</button><button class="settings-tab" data-settings-tab="printers">Printers</button><button class="settings-tab" data-settings-tab="menu-settings">Menu & pricing</button><button class="settings-tab" data-settings-tab="users">Users</button><button class="settings-tab" data-settings-tab="sales">Sales reports</button><button class="settings-tab super-admin-only" data-settings-tab="guests" hidden>Guests</button><button class="settings-tab" data-settings-tab="receipts">Receipt History</button><button class="settings-tab" data-settings-tab="bookings">Booking Management</button><button class="settings-tab super-admin-only" data-settings-tab="logs" hidden>Logs</button></div>
       <div class="settings-view active" id="my-sales-view">
         <div class="settings-intro"><h3>My Sales</h3><p>Your own sales performance — day, week, or month.</p></div>
         <div class="report-range-tabs" id="my-sales-range-tabs"><button class="report-range active" data-range="day">Today</button><button class="report-range" data-range="week">This week</button><button class="report-range" data-range="month">This month</button></div>
@@ -313,6 +313,10 @@
         <div class="settings-intro"><h3>Booking Management</h3><p>All dine-in cabin reservations, with cabin and booking time. Bookings are only accepted between 11:30 AM and 10:00 PM.</p></div>
         <div id="bookings-list" class="guest-directory-list"></div>
       </div>
+      <div class="settings-view" id="logs-view">
+        <div class="report-heading"><div class="settings-intro"><h3>Logs</h3><p>Every ticket and booking cancellation, with who cancelled it and when. Visible to Super Admin only.</p></div><button class="export-button" id="export-logs">⇩ <span>Export Excel</span></button></div>
+        <div id="cancellation-logs-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
     </section>
   </div>
   <div id="print-sheet" aria-hidden="true"></div>
@@ -357,7 +361,7 @@
     })();
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="app.js?v=34"></script>
+  <script src="app.js?v=35"></script>
   <script>
     // Registers the offline app-shell cache. Never touches /api/ calls (see
     // service-worker.js) — orders, sales, sync, and login behave exactly as
