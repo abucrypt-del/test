@@ -2359,19 +2359,29 @@ async function pullLiveDataFromCloud() {
 
   // Menu edits only ever landed on whichever device made them — every other
   // device's local menu was seeded once, long ago, and nothing ever pulled
-  // later additions back down. Merge-by-id, same as bookings below: only
-  // adds items missing locally, never touches/overwrites an existing one
-  // (an admin's own unsynced edit on this device should never be clobbered
-  // by a stale server copy).
+  // later additions or edits back down. This used to only add items
+  // missing locally, which meant a price/image/description edit to an
+  // item another device already had would never reach it at all — an
+  // edit is indistinguishable from a stale item unless something actually
+  // compares field values. Since menu edits now push immediately (see the
+  // push-on-write calls in saveMenu()), the "don't clobber a not-yet-
+  // synced local edit" race this used to guard against is now a window of
+  // a second or two, not up to 3-6s, so adopting the server's copy
+  // whenever it differs is safe in practice.
   const remoteMenuRaw = result?.data?.["alyazi-menu-en-v6"];
   if (remoteMenuRaw) {
     const remoteMenu = JSON.parse(remoteMenuRaw);
+    const remoteById = new Map(remoteMenu.map(item => [item.id, item]));
+    let menuChanged = false;
+    menuItems = menuItems.map(item => {
+      const remote = remoteById.get(item.id);
+      if (remote && JSON.stringify(remote) !== JSON.stringify(item)) { menuChanged = true; return remote; }
+      return item;
+    });
     const localIds = new Set(menuItems.map(item => item.id));
     const fresh = remoteMenu.filter(item => !localIds.has(item.id));
-    if (fresh.length) {
-      menuItems = [...menuItems, ...fresh];
-      saveMenu();
-    }
+    if (fresh.length) { menuItems = [...menuItems, ...fresh]; menuChanged = true; }
+    if (menuChanged) saveMenu();
   }
 
   // Same gap as menu items, and a much bigger deal here: a sale rung up on
