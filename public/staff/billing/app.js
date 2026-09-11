@@ -28,7 +28,7 @@ let menuItems = parseNonEmpty(localStorage.getItem("alyazi-menu-en-v6")) || [
   { id: 22, name: "Extra Mayonnaise Medium", description: "Medium side of mayonnaise", price: 30, category: "Extras", image: "mayonnaise.jpeg" },
   { id: 23, name: "Extra Mayonnaise Large", description: "Large side of mayonnaise", price: 40, category: "Extras", image: "mayonnaise.jpeg" },
   { id: 24, name: "Cool Drinks 500Ml", description: "Chilled soft drink, 500ml", price: 40, category: "Beverages", image: "beverages.jpeg" },
-  { id: 25, name: "Water 1Ltr", description: "Packaged drinking water, 1 litre", price: 22, category: "Beverages", image: "beverages.jpeg" }
+  { id: 25, name: "Water 1Ltr", description: "Packaged drinking water, 1 litre", price: 22, category: "Beverages", image: "water.jpeg" }
 ];
 // Every menu item gets a short voice code ("01", "02", ...) so staff can add
 // it by number instead of speaking the full name. Existing items keep
