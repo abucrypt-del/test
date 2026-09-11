@@ -2252,18 +2252,31 @@ let syncInFlight = false;
 // the same string reference when a value hasn't changed, so this is a
 // cheap reference check for nearly every key on nearly every tick — and
 // only costs real work for the handful of keys that actually changed.
+// changedData exists because pushing the *entire* snapshot on every tick
+// (the original design) meant a device that never touched its local menu
+// still re-sent its own — possibly stale — copy of it just because
+// something unrelated changed (taking an order touches alyazi-cabins-v1,
+// which used to be enough to trip a full-snapshot push). D1's upsert has
+// no real conflict resolution beyond "whoever's request lands last wins",
+// so that stale copy could silently overwrite a fresh edit made on a
+// different device seconds earlier — a menu image/price change made on
+// one device would revert a couple of sync ticks later for no visible
+// reason. Only ever pushing the keys that actually changed *on this
+// device* means a device that didn't touch the menu can never carry a
+// stale copy of it into a push at all.
 function collectSyncSnapshot() {
   const data = {};
+  const changedData = {};
   let changed = false;
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key || !key.startsWith("alyazi-")) continue;
     const value = localStorage.getItem(key);
     data[key] = value;
-    if (lastSyncedValues.get(key) !== value) changed = true;
+    if (lastSyncedValues.get(key) !== value) { changed = true; changedData[key] = value; }
   }
   if (!changed && Object.keys(data).length !== lastSyncedValues.size) changed = true;
-  return { data, changed };
+  return { data, changedData, changed };
 }
 
 function openSyncDb() {
@@ -2456,7 +2469,7 @@ async function pullLiveDataFromCloud() {
 
 async function runSync({ manual = false } = {}) {
   if (syncInFlight) return;
-  const { data: snapshot, changed } = collectSyncSnapshot();
+  const { data: snapshot, changedData, changed } = collectSyncSnapshot();
   // A push (this device's own data) only happens when something actually
   // changed, or the user forced it — but the live pulls below must always
   // run every tick regardless, or an idle screen with no local changes
@@ -2474,7 +2487,10 @@ async function runSync({ manual = false } = {}) {
       await saveSnapshotLocally(snapshot, updatedAt);
       lastSyncedValues = new Map(Object.entries(snapshot));
       try {
-        await saveSnapshotToCloud(snapshot, updatedAt);
+        // Manual ("Sync now") pushes everything as a deliberate full
+        // resync; the automatic background tick only pushes keys that
+        // changed on this device (see collectSyncSnapshot).
+        await saveSnapshotToCloud(manual ? snapshot : changedData, updatedAt);
       } catch (err) {
         cloudOk = false;
       }
