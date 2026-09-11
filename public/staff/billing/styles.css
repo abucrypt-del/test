@@ -331,6 +331,16 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 .upi-payment strong { color: var(--sage-dark); font-size: 12px; }
 .upi-payment > span { color: var(--muted); font-size: 10px; }
 .upi-payment canvas, .upi-payment img { padding: 7px; border-radius: 4px; background: #fffaf2; }
+.split-payment-toggle { display: flex; align-items: center; gap: 7px; margin-top: 4px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.split-payment-toggle input { accent-color: var(--sage-dark); }
+.split-payment-panel { margin-top: 12px; padding: 13px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--line); border-radius: 4px; background: #f5f7ef; }
+.split-row { display: flex; align-items: center; gap: 8px; }
+.split-row select { height: 34px; padding: 0 9px; border: 1px solid var(--line); border-radius: 3px; background: white; color: var(--ink); font: 11px "DM Sans", sans-serif; }
+.split-row input[type="number"] { flex: 1; height: 34px; padding: 0 9px; border: 1px solid var(--line); border-radius: 3px; background: white; color: var(--ink); font: 11px "DM Sans", sans-serif; }
+.split-row-remaining { justify-content: space-between; color: var(--muted); font-size: 11px; }
+.split-row-remaining select { flex: 0 0 auto; }
+.split-row-remaining strong { color: var(--sage-dark); }
+.split-error { margin: 0; color: var(--coral); font-size: 10px; font-weight: 600; min-height: 12px; }
 .upi-confirm { display: flex; align-items: center; gap: 7px; color: var(--sage-dark); font-size: 10px; font-weight: 600; }
 .upi-confirm input { accent-color: var(--sage-dark); }
 .upi-select-label { width: 100%; color: var(--muted); font-size: 10px; }
@@ -794,9 +804,11 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
    small caps tagline) need their own neutral color instead of inheriting
    what's now a red. */
 [data-theme="modern"] .eyebrow, [data-theme="modern"] .brand small { color: var(--muted) !important; }
-[data-theme="modern"] .whatsapp-card, [data-theme="modern"] .report-summary div, [data-theme="modern"] .payment-total {
+[data-theme="modern"] .whatsapp-card, [data-theme="modern"] .report-summary div, [data-theme="modern"] .payment-total,
+[data-theme="modern"] .split-payment-panel {
   background: #f7f7f4; border-color: var(--line);
 }
+[data-theme="modern"] .split-payment-panel { border-radius: var(--radius-md) !important; }
 @media (max-width: 950px) { .workspace { grid-template-columns: 1fr; } .ticket-panel { min-height: 510px; border-top: 1px solid var(--line); border-left: 0; } .ticket-header { padding-top: 32px; } }
 @media (max-width: 950px) { .ticket-panel { min-height: 0; } .order-list { min-height: 160px; } }
 @media (max-width: 600px) { .topbar { height: 65px; padding: 0 20px; } .service-status, .settings-button span, .sync-status { display: none; } .sync-widget { border-right: none; padding-right: 0; } .topbar-actions { gap: 13px; } .menu-panel { padding: 34px 20px 48px; } .welcome-row { display: block; } .outline-button { margin-top: 24px; } .category-tabs { margin-top: 32px; gap: 20px; } .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; } .menu-card { min-height: 242px; } .food-image { height: 110px; } .card-content { padding: 11px; } .card-content h3 { font-size: 15px; } .card-content p { font-size: 10px; } .ticket-header, .order-list, .ticket-footer { padding-left: 20px; padding-right: 20px; } .order-modes { margin-left: 20px; margin-right: 20px; } .guest-picker { margin-left: 20px; margin-right: 20px; } .settings-modal { max-height: 95vh; } .settings-heading, .settings-view { padding-left: 20px; padding-right: 20px; } .settings-tabs { padding: 0 20px; } .form-grid, .add-menu-form { grid-template-columns: 1fr 1fr; } .form-grid label:first-child { grid-column: span 2; } .add-menu-form .save-button { grid-column: span 2; } }

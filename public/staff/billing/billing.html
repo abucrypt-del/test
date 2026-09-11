@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Pirata+One&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=26" />
+  <link rel="stylesheet" href="styles.css?v=27" />
   <link rel="manifest" href="manifest.json" />
   <script>
     // Applied here, before <body> paints, so switching themes doesn't
@@ -132,7 +132,7 @@
   <div class="modal-backdrop" id="payment-modal" hidden>
     <section class="payment-modal" role="dialog" aria-modal="true" aria-labelledby="payment-title">
       <div class="settings-heading"><div><p class="eyebrow">Final step</p><h2 id="payment-title">Collect payment</h2></div><button class="close-button" id="close-payment" aria-label="Close payment">×</button></div>
-      <div class="payment-body"><div class="payment-total"><span>Amount due</span><strong id="payment-total">₹0.00</strong></div><div class="payment-methods"><button class="payment-method active" data-payment="Cash">Cash</button><button class="payment-method" data-payment="UPI">UPI</button><button class="payment-method" data-payment="Card">Card</button></div><div class="upi-payment" id="upi-payment" hidden><label class="upi-select-label">Receive payment in<select id="payment-upi-account"></select></label><div id="upi-qr"></div><strong>Scan to pay with UPI</strong><span id="upi-details">Amount will be filled automatically</span><label class="upi-confirm"><input id="upi-payment-confirmed" type="checkbox"> I have received the UPI payment</label></div><button class="save-button complete-payment" id="complete-payment">Mark paid & print bill</button><button class="secondary-action" id="reprint-receipt-btn" hidden>🖨️ <span>Reprint last receipt</span></button></div>
+      <div class="payment-body"><div class="payment-total"><span>Amount due</span><strong id="payment-total">₹0.00</strong></div><div class="payment-methods"><button class="payment-method active" data-payment="Cash">Cash</button><button class="payment-method" data-payment="UPI">UPI</button><button class="payment-method" data-payment="Card">Card</button></div><label class="split-payment-toggle"><input type="checkbox" id="split-payment-toggle"> Split between two payment methods</label><div class="split-payment-panel" id="split-payment-panel" hidden><div class="split-row"><select id="split-method-1" aria-label="First payment method"><option value="Cash">Cash</option><option value="UPI">UPI</option><option value="Card">Card</option></select><input type="number" id="split-amount-1" min="0" step="0.01" placeholder="Amount" aria-label="First payment amount"></div><div class="split-row split-row-remaining"><select id="split-method-2" aria-label="Second payment method"><option value="UPI">UPI</option><option value="Cash">Cash</option><option value="Card">Card</option></select><span>Remaining <strong id="split-remaining-display">₹0.00</strong></span></div><p class="split-error" id="split-error"></p></div><div class="upi-payment" id="upi-payment" hidden><label class="upi-select-label">Receive payment in<select id="payment-upi-account"></select></label><div id="upi-qr"></div><strong>Scan to pay with UPI</strong><span id="upi-details">Amount will be filled automatically</span><label class="upi-confirm"><input id="upi-payment-confirmed" type="checkbox"> I have received the UPI payment</label></div><button class="save-button complete-payment" id="complete-payment">Mark paid & print bill</button><button class="secondary-action" id="reprint-receipt-btn" hidden>🖨️ <span>Reprint last receipt</span></button></div>
     </section>
   </div>
   <div class="modal-backdrop" id="takeaway-board-modal" hidden>
@@ -412,7 +412,7 @@
     })();
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="app.js?v=42"></script>
+  <script src="app.js?v=43"></script>
   <script>
     // Registers the offline app-shell cache. Never touches /api/ calls (see
     // service-worker.js) — orders, sales, sync, and login behave exactly as

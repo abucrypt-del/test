@@ -27,7 +27,8 @@ let menuItems = parseNonEmpty(localStorage.getItem("alyazi-menu-en-v6")) || [
   { id: 21, name: "Extra Mayonnaise", description: "Extra side of mayonnaise", price: 20, category: "Extras", image: "mayonnaise.jpeg" },
   { id: 22, name: "Extra Mayonnaise Medium", description: "Medium side of mayonnaise", price: 30, category: "Extras", image: "mayonnaise.jpeg" },
   { id: 23, name: "Extra Mayonnaise Large", description: "Large side of mayonnaise", price: 40, category: "Extras", image: "mayonnaise.jpeg" },
-  { id: 24, name: "Cool Drinks 500Ml", description: "Chilled soft drink, 500ml", price: 40, category: "Beverages", image: "beverages.jpeg" }
+  { id: 24, name: "Cool Drinks 500Ml", description: "Chilled soft drink, 500ml", price: 40, category: "Beverages", image: "beverages.jpeg" },
+  { id: 25, name: "Water 1Ltr", description: "Packaged drinking water, 1 litre", price: 22, category: "Beverages", image: "beverages.jpeg" }
 ];
 // Every menu item gets a short voice code ("01", "02", ...) so staff can add
 // it by number instead of speaking the full name. Existing items keep
@@ -50,6 +51,7 @@ let kotState = "not-sent";
 let kitchenPrepStartedAt = null;
 let kitchenPrepTimer = null;
 let paymentMethod = "Cash";
+let splitPaymentActive = false;
 let billState = "not-printed";
 let discountType = "percent";
 let discountValue = 0;
@@ -1221,33 +1223,110 @@ function openPayment() {
   document.querySelector("#upi-payment-confirmed").checked = false;
   document.querySelector("#complete-payment").disabled = false;
   document.querySelector("#reprint-receipt-btn").hidden = printedBills.length === 0;
+  splitPaymentActive = false;
+  document.querySelector("#split-payment-toggle").checked = false;
+  document.querySelector(".payment-methods").hidden = false;
+  document.querySelector("#split-payment-panel").hidden = true;
+  document.querySelector("#split-amount-1").value = "";
+  document.querySelector("#split-error").textContent = "";
   document.querySelector("#payment-modal").hidden = false;
+  updateUpiQr();
+}
+
+// The frozen "Amount due" shown in the modal, not the live ticket total —
+// reading #total directly here used to generate a UPI QR for whatever the
+// ticket total happened to be at scan time rather than what "Amount due"
+// actually displayed, which could drift if anything touched the order
+// while the modal was open.
+function getPaymentDueTotal() {
+  return Number(document.querySelector("#payment-total").textContent.replace(/[^\d.]/g, ""));
+}
+
+function getSplitState() {
+  const total = getPaymentDueTotal();
+  const method1 = document.querySelector("#split-method-1").value;
+  const method2 = document.querySelector("#split-method-2").value;
+  const amt1Raw = document.querySelector("#split-amount-1").value;
+  const amt1 = Number(amt1Raw);
+  const amt2 = Math.round(Math.max(0, total - amt1) * 100) / 100;
+  const entered = amt1Raw.trim() !== "";
+  const valid = entered && !Number.isNaN(amt1) && amt1 > 0 && amt1 < total && method1 !== method2;
+  return { total, method1, method2, amt1, amt2, entered, valid };
+}
+
+function renderSplitPanel() {
+  if (!splitPaymentActive) return;
+  const state = getSplitState();
+  document.querySelector("#split-remaining-display").textContent = money(state.amt2);
+  document.querySelector("#split-error").textContent = !state.entered || state.valid
+    ? ""
+    : state.method1 === state.method2
+      ? "Choose two different payment methods."
+      : "Enter an amount less than the total due.";
+  updateUpiQr();
 }
 
 function updateUpiQr() {
   const upiPanel = document.querySelector("#upi-payment");
-  if (paymentMethod !== "UPI") { upiPanel.hidden = true; document.querySelector("#complete-payment").disabled = false; return; }
-  const total = document.querySelector("#total").textContent.replace(/[^\d.]/g, "");
+  const completeBtn = document.querySelector("#complete-payment");
+  let upiAmount = null;
+  let otherConditionsOk = true;
+  if (splitPaymentActive) {
+    const state = getSplitState();
+    otherConditionsOk = state.valid;
+    // Only once a split amount is actually entered — otherwise this
+    // would show a QR for the full remaining balance (amt2 defaults to
+    // the whole total when amt1 is empty) before the split even means
+    // anything yet.
+    if (state.entered) {
+      if (state.method1 === "UPI") upiAmount = state.amt1;
+      else if (state.method2 === "UPI") upiAmount = state.amt2;
+    }
+  } else if (paymentMethod === "UPI") {
+    upiAmount = getPaymentDueTotal();
+  }
+  if (upiAmount === null || !(upiAmount > 0)) {
+    upiPanel.hidden = true;
+    completeBtn.disabled = !otherConditionsOk;
+    return;
+  }
   const account = upiAccounts.find(item => item.id === Number(selectedUpiId)) || upiAccounts.find(item => item.enabled);
-  if (!account) { document.querySelector("#upi-details").textContent = "Link an enabled UPI account in Settings"; document.querySelector("#complete-payment").disabled = true; return; }
+  if (!account) { document.querySelector("#upi-details").textContent = "Link an enabled UPI account in Settings"; completeBtn.disabled = true; return; }
   const upiId = account.upiId;
-  const paymentUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent("AL YAZI MANDI RESTRAUNT")}&am=${total}&cu=INR`;
+  const paymentUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent("AL YAZI MANDI RESTRAUNT")}&am=${upiAmount.toFixed(2)}&cu=INR`;
   upiPanel.hidden = false;
   document.querySelector("#upi-qr").innerHTML = "";
   if (window.QRCode) new QRCode(document.querySelector("#upi-qr"), { text: paymentUrl, width: 148, height: 148, colorDark: "#2d2924", colorLight: "#fffaf2" });
-  document.querySelector("#upi-details").textContent = `${account.name} · ${upiId} · ${money(Number(total))}`;
-  document.querySelector("#complete-payment").disabled = !document.querySelector("#upi-payment-confirmed").checked;
+  document.querySelector("#upi-details").textContent = `${account.name} · ${upiId} · ${money(upiAmount)}`;
+  completeBtn.disabled = !(otherConditionsOk && document.querySelector("#upi-payment-confirmed").checked);
 }
 
 function finishPayment() {
+  if (splitPaymentActive) {
+    const state = getSplitState();
+    if (!state.valid) {
+      document.querySelector("#split-error").textContent = state.method1 === state.method2
+        ? "Choose two different payment methods."
+        : "Enter a split amount that's more than ₹0 and less than the total due.";
+      return;
+    }
+  }
   const integrations = JSON.parse(localStorage.getItem("alyazi-integrations") || "{}");
   document.querySelector("#payment-modal").hidden = true;
   const cabin = getCabinData(currentCabinId);
-  const total = Number(document.querySelector("#total").textContent.replace(/[^\d.]/g, ""));
+  const total = getPaymentDueTotal();
+  // Split payments record as a composite label ("Cash ₹200.00 + UPI
+  // ₹227.59") in the same `method` field a single payment would use —
+  // sales.method is read-only display text everywhere (reports, CSV
+  // export, receipts never show it at all), so no schema/sync change
+  // needed to carry the breakdown through.
+  const methodLabel = splitPaymentActive
+    ? (() => { const s = getSplitState(); return `${s.method1} ${money(s.amt1)} + ${s.method2} ${money(s.amt2)}`; })()
+    : paymentMethod;
 
   if (payUpfrontActive) {
     payUpfrontActive = false;
-    sales.push({ id: Date.now(), total, method: paymentMethod, mode: orderMode, paidUpfront: true, createdAt: new Date().toISOString(), user: currentUser.name, items: [...order.values()].map(item => ({ name: item.name, quantity: item.quantity, price: item.price })) });
+    sales.push({ id: Date.now(), total, method: methodLabel, mode: orderMode, paidUpfront: true, createdAt: new Date().toISOString(), user: currentUser.name, items: [...order.values()].map(item => ({ name: item.name, quantity: item.quantity, price: item.price })) });
     localStorage.setItem("alyazi-sales-v1", JSON.stringify(sales));
     const kots = getKots();
     kots[currentCabinId] = { cabinId: currentCabinId, cabinName: cabin.name, items: [...order.values()], mode: orderMode, status: "sent", paid: true, createdAt: new Date().toISOString() };
@@ -1262,25 +1341,25 @@ function finishPayment() {
     // Receipt prints later, at handover (see closeCabin) — not here at
     // pay time, so it comes off the printer when the guest actually
     // collects the order.
-    showToast(`Payment received by ${paymentMethod}. Sent to kitchen — starting next ticket.`);
+    showToast(`Payment received by ${methodLabel}. Sent to kitchen — starting next ticket.`);
     createTakeawayTicket();
     runSync({ manual: false });
     return;
   }
 
   printTicket("bill");
-  showToast(`Payment received by ${paymentMethod}. Confirm the printed bill to continue.`);
+  showToast(`Payment received by ${methodLabel}. Confirm the printed bill to continue.`);
   kotState = "paid";
   stopPaymentReminder();
   billState = "paid-awaiting-confirmation";
   cabin.kotState = kotState;
   cabin.billState = billState;
   saveCabins();
-  sales.push({ id: Date.now(), total, method: paymentMethod, mode: orderMode, createdAt: new Date().toISOString(), user: currentUser.name, items: [...order.values()].map(item => ({ name: item.name, quantity: item.quantity, price: item.price })) });
+  sales.push({ id: Date.now(), total, method: methodLabel, mode: orderMode, createdAt: new Date().toISOString(), user: currentUser.name, items: [...order.values()].map(item => ({ name: item.name, quantity: item.quantity, price: item.price })) });
   localStorage.setItem("alyazi-sales-v1", JSON.stringify(sales));
   document.body.classList.remove("kot-ready");
   renderOrder();
-  openWhatsApp(integrations.billingWhatsapp || "", buildOrderMessage(`PAYMENT COMPLETE - ${paymentMethod}`));
+  openWhatsApp(integrations.billingWhatsapp || "", buildOrderMessage(`PAYMENT COMPLETE - ${methodLabel}`));
   runSync({ manual: false });
 }
 
@@ -1538,7 +1617,18 @@ document.querySelector("#discount-type").addEventListener("change", event => {
   renderOrder();
 });
 document.querySelector("#complete-payment").addEventListener("click", finishPayment);
-document.querySelector("#upi-payment-confirmed").addEventListener("change", event => { document.querySelector("#complete-payment").disabled = !event.target.checked; });
+document.querySelector("#upi-payment-confirmed").addEventListener("change", updateUpiQr);
+document.querySelector("#split-payment-toggle").addEventListener("change", event => {
+  splitPaymentActive = event.target.checked;
+  document.querySelector(".payment-methods").hidden = splitPaymentActive;
+  document.querySelector("#split-payment-panel").hidden = !splitPaymentActive;
+  document.querySelector("#split-amount-1").value = "";
+  document.querySelector("#split-error").textContent = "";
+  if (splitPaymentActive) renderSplitPanel(); else updateUpiQr();
+});
+document.querySelector("#split-amount-1").addEventListener("input", renderSplitPanel);
+document.querySelector("#split-method-1").addEventListener("change", renderSplitPanel);
+document.querySelector("#split-method-2").addEventListener("change", renderSplitPanel);
 document.querySelector("#reprint-receipt-btn").addEventListener("click", () => {
   if (printedBills.length === 0) { showToast("No previous bills to reprint"); return; }
   const lastBill = printedBills[printedBills.length - 1];

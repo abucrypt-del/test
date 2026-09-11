@@ -16,7 +16,7 @@
 //    (same discipline as app.js's own ?v= query param). Bumping it makes
 //    the old cache get deleted on the next activate — nothing lingers.
 
-const CACHE_VERSION = "v11";
+const CACHE_VERSION = "v12";
 const CACHE_NAME = `alyazi-billing-shell-${CACHE_VERSION}`;
 const SCOPE = "/staff/billing/";
 
