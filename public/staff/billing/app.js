@@ -112,6 +112,7 @@ function logCancellation(action, details) {
   });
   saveCancellationLogs();
   if (currentUser.role === "Super Admin") renderCancellationLogs();
+  runSync({ manual: false });
 }
 
 let currentCabinId = 1;
@@ -449,9 +450,17 @@ function closeCabin(cabinId) {
   const isActive = cabinId === currentCabinId;
   const defaultMode = cabin.type === "takeaway" ? "Take Away" : "Dine In";
   // Paid-upfront tickets never print a receipt at payment time — only
-  // the token/KOT does. The receipt prints here, at handover.
-  if (isActive && cabin.type === "takeaway" && cabin.paidUpfront) {
-    printTicket("bill");
+  // the token/KOT does. The receipt prints here, at handover — for
+  // whichever ticket is being closed, not just the one currently on
+  // screen (previously this only fired when isActive, so handing over
+  // any takeaway ticket other than the active tab silently never printed
+  // a receipt or recorded one in Receipt History at all). When it IS the
+  // active cabin, no override is passed so this still reads the live
+  // on-screen order/guest/discount state rather than cabin.order, which
+  // only gets synced from the globals when switching away from a cabin
+  // and could be stale for the one currently being edited.
+  if (cabin.type === "takeaway" && cabin.paidUpfront) {
+    printTicket("bill", false, null, false, isActive ? null : cabin);
   }
   cabin.order.clear();
   cabin.guestName = "";
@@ -518,10 +527,12 @@ function saveMenu() {
   renderMenu(activeCategory);
   renderMenuTable();
   renderCategoryTabs();
+  runSync({ manual: false });
 }
 
 function saveCategories() {
   localStorage.setItem("alyazi-categories-v1", JSON.stringify(menuCategories));
+  runSync({ manual: false });
 }
 
 function renderCategoryTabs() {
@@ -661,6 +672,7 @@ function getRolePermissions() {
 
 function saveRolePermissions(permissions) {
   localStorage.setItem("alyazi-role-permissions-v1", JSON.stringify(permissions));
+  runSync({ manual: false });
 }
 
 function hasSettingsPageAccess(role, page) {
@@ -748,7 +760,7 @@ function renderUpiAccounts() {
   if (selectedUpiId) paymentSelect.value = selectedUpiId;
 }
 
-function saveUpiAccounts() { localStorage.setItem("alyazi-upi-accounts-v1", JSON.stringify(upiAccounts)); renderUpiAccounts(); }
+function saveUpiAccounts() { localStorage.setItem("alyazi-upi-accounts-v1", JSON.stringify(upiAccounts)); renderUpiAccounts(); runSync({ manual: false }); }
 
 function loadPrintSettings() {
   document.querySelector("#print-phone").value = printSettings.phone;
@@ -899,6 +911,16 @@ function renderSales(range = "day", fromDate = "", toDate = "") {
       itemTotals.set(item.name, { quantity: current.quantity + item.quantity, revenue: current.revenue + item.price * item.quantity });
     }));
   const rankedItems = [...itemTotals.entries()].sort((first, second) => second[1].quantity - first[1].quantity || second[1].revenue - first[1].revenue);
+  const transactionsList = document.querySelector("#sales-transactions-list");
+  if (transactionsList) {
+    const sortedSales = [...filtered].sort((first, second) => new Date(second.createdAt) - new Date(first.createdAt));
+    transactionsList.innerHTML = sortedSales.length === 0
+      ? `<div style="padding: 20px; text-align: center; color: var(--muted);">No sales in this range</div>`
+      : sortedSales.map(sale => {
+          const itemsSummary = sale.items?.map(item => `${item.quantity} x ${escapeHtml(item.name)}`).join(", ") || "";
+          return `<div class="receipt-item"><div><strong>${escapeHtml(sale.user || "Unknown")}</strong><small>${new Date(sale.createdAt).toLocaleString()} · ${escapeHtml(sale.mode || "")} · ${escapeHtml(sale.method || "")}${itemsSummary ? `<br>${itemsSummary}` : ""}</small></div><div class="receipt-total">${money(sale.total)}</div></div>`;
+        }).join("");
+  }
   const bestSellers = document.querySelector("#best-sellers");
   if (!rankedItems.length) { bestSellers.innerHTML = `<div class="best-sellers-empty">Complete a payment to see menu sales rankings.</div>`; return; }
   const highestQuantity = rankedItems[0][1].quantity;
@@ -1052,27 +1074,36 @@ function addItem(id) {
   showToast(`${item.name} added to ticket`);
 }
 
-function printTicket(type, isReprint = false, itemsOverride = null, isAdditional = false) {
-  const items = itemsOverride || [...order.values()];
+function printTicket(type, isReprint = false, itemsOverride = null, isAdditional = false, cabinOverride = null) {
+  const items = itemsOverride || [...(cabinOverride ? cabinOverride.order.values() : order.values())];
   if (!items.length) { showToast(`Add items before printing ${type}`); return; }
-  renderPrintSheet(type, isReprint, itemsOverride, isAdditional);
+  renderPrintSheet(type, isReprint, itemsOverride, isAdditional, cabinOverride);
   document.body.classList.add("print-ticket");
   window.print();
   document.body.classList.remove("print-ticket");
   showToast(type === "token" ? "Token slip sent to configured printer" : `${type} sent to configured printer`);
 }
 
-function renderPrintSheet(type, isReprint = false, itemsOverride = null, isAdditional = false) {
-  const items = itemsOverride || [...order.values()];
+// cabinOverride lets a caller print/record a receipt for a takeaway ticket
+// that isn't the currently active tab (see closeCabin) — without it, this
+// function reads order/guest/discount/mode off the active-cabin globals,
+// which are only correct for whichever cabin is on screen right now.
+function renderPrintSheet(type, isReprint = false, itemsOverride = null, isAdditional = false, cabinOverride = null) {
+  const items = itemsOverride || [...(cabinOverride ? cabinOverride.order.values() : order.values())];
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discountAmount = type === "bill" ? Math.min(discountType === "amount" ? discountValue : subtotal * (discountValue / 100), subtotal) : 0;
+  const effectiveDiscountType = cabinOverride ? cabinOverride.discountType : discountType;
+  const effectiveDiscountValue = cabinOverride ? cabinOverride.discountValue : discountValue;
+  const effectiveGuestName = cabinOverride ? cabinOverride.guestName : currentOrderGuestName;
+  const effectiveGuestPhone = cabinOverride ? cabinOverride.guestPhone : currentOrderGuestPhone;
+  const effectiveOrderMode = cabinOverride ? cabinOverride.orderMode : orderMode;
+  const discountAmount = type === "bill" ? Math.min(effectiveDiscountType === "amount" ? effectiveDiscountValue : subtotal * (effectiveDiscountValue / 100), subtotal) : 0;
   const taxableAmount = subtotal - discountAmount;
   const tax = taxableAmount * (printSettings.taxRatePercent / 100);
   const total = taxableAmount + tax;
   const safe = value => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const guestInfo = currentOrderGuestName || currentOrderGuestPhone ? `<div class="print-line"><span>Guest</span><span>${safe(currentOrderGuestName)}${currentOrderGuestPhone ? ` ${safe(currentOrderGuestPhone)}` : ""}</span></div>` : "";
+  const guestInfo = effectiveGuestName || effectiveGuestPhone ? `<div class="print-line"><span>Guest</span><span>${safe(effectiveGuestName)}${effectiveGuestPhone ? ` ${safe(effectiveGuestPhone)}` : ""}</span></div>` : "";
   const receiptType = type === "bill" ? (isReprint ? "--- COPY ---" : "--- ORIGINAL ---") : "";
-  const activeCabin = getCabinData(currentCabinId);
+  const activeCabin = cabinOverride || getCabinData(currentCabinId);
   // On the token slip, the big header already is the token — this row
   // would just repeat it, so skip it there.
   const locationLine = type === "token" ? "" : activeCabin && activeCabin.type === "takeaway" ? `<div class="print-line"><span>Token</span><strong style="font-size:16px;">#${safe(activeCabin.token)}</strong></div>` : `<div class="print-line"><span>Table</span><span>${activeCabin ? safe(activeCabin.name) : "Dine In"}</span></div>`;
@@ -1086,7 +1117,7 @@ function renderPrintSheet(type, isReprint = false, itemsOverride = null, isAddit
     }
     orderNumberLine = `<div class="print-line"><span>Order #</span><span>${activeCabin.orderNumber}</span></div>`;
   }
-  const orderTypeLine = printSettings.showOrderType ? `<div class="print-line"><span>Order type</span><span>${safe(orderMode)}</span></div>` : "";
+  const orderTypeLine = printSettings.showOrderType ? `<div class="print-line"><span>Order type</span><span>${safe(effectiveOrderMode)}</span></div>` : "";
   const dateLine = `<div class="print-line"><span>Date</span><span>${new Date().toLocaleString()}</span></div>`;
   // Only the standalone token slip (printed before payment) leads with
   // the big token number — the actual receipt at handover says
@@ -1103,8 +1134,9 @@ function renderPrintSheet(type, isReprint = false, itemsOverride = null, isAddit
   const html = `<div style="text-align:${printSettings.headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}${printSettings.address ? `<p>${safe(printSettings.address)}</p>` : ""}${printSettings.phone ? `<p>Ph: ${safe(printSettings.phone)}</p>` : ""}${printSettings.whatsapp ? `<p>WhatsApp: ${safe(printSettings.whatsapp)}</p>` : ""}</div><hr><div style="text-align:center"><h2>${headerTitle}</h2>${receiptType ? `<p style="font-weight:bold;">${receiptType}</p>` : ""}</div>${guestInfo}${orderTypeLine}${locationLine}${orderNumberLine}${dateLine}<hr>${itemsBlock}${totalsBlock}${printSettings.footer ? `<hr><div style="text-align:${printSettings.footerAlign}"><p>${safe(printSettings.footer)}</p></div>` : ""}`;
   document.querySelector("#print-sheet").innerHTML = html;
   if (type === "bill" && !isReprint) {
-    printedBills.push({ id: Date.now(), html: html.replace("--- ORIGINAL ---", "--- COPY ---"), createdAt: new Date().toISOString(), guest: currentOrderGuestName, phone: currentOrderGuestPhone, total, originalHtml: html });
+    printedBills.push({ id: Date.now(), html: html.replace("--- ORIGINAL ---", "--- COPY ---"), createdAt: new Date().toISOString(), guest: effectiveGuestName, phone: effectiveGuestPhone, total, originalHtml: html });
     localStorage.setItem("alyazi-printed-bills", JSON.stringify(printedBills));
+    runSync({ manual: false });
   }
 }
 
@@ -1232,6 +1264,7 @@ function finishPayment() {
     // collects the order.
     showToast(`Payment received by ${paymentMethod}. Sent to kitchen — starting next ticket.`);
     createTakeawayTicket();
+    runSync({ manual: false });
     return;
   }
 
@@ -1248,6 +1281,7 @@ function finishPayment() {
   document.body.classList.remove("kot-ready");
   renderOrder();
   openWhatsApp(integrations.billingWhatsapp || "", buildOrderMessage(`PAYMENT COMPLETE - ${paymentMethod}`));
+  runSync({ manual: false });
 }
 
 function showToast(message) {
@@ -1665,8 +1699,8 @@ document.querySelector("#user-table-body").addEventListener("click", event => {
   }).catch(() => showToast("Couldn't reach the staff server"));
 });
 document.querySelector("#printer-form").addEventListener("submit", event => { event.preventDefault(); if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-printer")) { showToast("You don't have permission to edit printer settings"); return; } localStorage.setItem("alyazi-printers", JSON.stringify({ network: { name: document.querySelector("#network-name").value, ip: document.querySelector("#network-ip").value, port: document.querySelector("#network-port").value, enabled: document.querySelector("#network-enabled").checked }, wired: { name: document.querySelector("#wired-name").value, device: document.querySelector("#wired-device").value, enabled: document.querySelector("#wired-enabled").checked } })); showToast("Printer settings saved"); });
-document.querySelector("#print-settings-form").addEventListener("submit", event => { event.preventDefault(); if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-printer")) { showToast("You don't have permission to edit printer settings"); return; } printSettings = { ...printSettings, phone: document.querySelector("#print-phone").value.trim(), whatsapp: document.querySelector("#print-whatsapp").value.trim(), address: document.querySelector("#print-address").value.trim(), footer: document.querySelector("#print-footer").value.trim(), showLogo: document.querySelector("#print-show-logo").checked, showTax: document.querySelector("#print-show-tax").checked, showOrderType: document.querySelector("#print-show-order-type").checked, taxRatePercent: Math.max(0, Number(document.querySelector("#print-tax-rate").value) || 0) }; localStorage.setItem("alyazi-print-settings-v1", JSON.stringify(printSettings)); renderOrder(); showToast("Print settings saved"); });
-document.querySelector("#save-integrations").addEventListener("click", () => { if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-workflow")) { showToast("You don't have permission to edit workflow settings"); return; } localStorage.setItem("alyazi-integrations", JSON.stringify({ kitchenWhatsapp: document.querySelector("#kitchen-whatsapp").value, billingWhatsapp: document.querySelector("#billing-whatsapp").value, kitchenDisplayUrl: document.querySelector("#kitchen-display-url").value })); showToast("Workflow settings saved"); });
+document.querySelector("#print-settings-form").addEventListener("submit", event => { event.preventDefault(); if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-printer")) { showToast("You don't have permission to edit printer settings"); return; } printSettings = { ...printSettings, phone: document.querySelector("#print-phone").value.trim(), whatsapp: document.querySelector("#print-whatsapp").value.trim(), address: document.querySelector("#print-address").value.trim(), footer: document.querySelector("#print-footer").value.trim(), showLogo: document.querySelector("#print-show-logo").checked, showTax: document.querySelector("#print-show-tax").checked, showOrderType: document.querySelector("#print-show-order-type").checked, taxRatePercent: Math.max(0, Number(document.querySelector("#print-tax-rate").value) || 0) }; localStorage.setItem("alyazi-print-settings-v1", JSON.stringify(printSettings)); renderOrder(); runSync({ manual: false }); showToast("Print settings saved"); });
+document.querySelector("#save-integrations").addEventListener("click", () => { if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-workflow")) { showToast("You don't have permission to edit workflow settings"); return; } localStorage.setItem("alyazi-integrations", JSON.stringify({ kitchenWhatsapp: document.querySelector("#kitchen-whatsapp").value, billingWhatsapp: document.querySelector("#billing-whatsapp").value, kitchenDisplayUrl: document.querySelector("#kitchen-display-url").value })); runSync({ manual: false }); showToast("Workflow settings saved"); });
 document.querySelector("#upi-account-form").addEventListener("submit", event => { event.preventDefault(); if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-upi")) { showToast("You don't have permission to edit UPI settings"); return; } const account = { id: Date.now(), name: document.querySelector("#new-upi-name").value.trim(), bank: document.querySelector("#new-upi-bank").value.trim(), upiId: document.querySelector("#new-upi-id").value.trim(), enabled: true }; upiAccounts.push(account); selectedUpiId = account.id; saveUpiAccounts(); event.target.reset(); showToast(`${account.name} linked`); });
 document.querySelector("#upi-accounts-list").addEventListener("change", event => { if (!event.target.dataset.upiToggle) return; if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-upi")) { showToast("You don't have permission to edit UPI settings"); renderUpiAccounts(); return; } const account = upiAccounts.find(item => item.id === Number(event.target.dataset.upiToggle)); account.enabled = event.target.checked; saveUpiAccounts(); });
 document.querySelector("#upi-accounts-list").addEventListener("click", event => { if (!event.target.dataset.deleteUpi) return; if (!hasSettingsActionAccess(currentUser.role, "printers", "edit-upi")) { showToast("You don't have permission to edit UPI settings"); return; } upiAccounts = upiAccounts.filter(item => item.id !== Number(event.target.dataset.deleteUpi)); selectedUpiId = upiAccounts.find(item => item.enabled)?.id || null; saveUpiAccounts(); showToast("UPI account removed"); });
@@ -1799,6 +1833,7 @@ function getBookings() {
 
 function saveBookings(bookings) {
   localStorage.setItem("alyazi-bookings-v1", JSON.stringify(bookings));
+  runSync({ manual: false });
 }
 
 const bookingModal = document.querySelector("#booking-modal");
@@ -2359,6 +2394,7 @@ function isServiceOpen() {
 function setServiceOpen(open) {
   localStorage.setItem("alyazi-service-open-v1", String(open));
   renderServiceStatus();
+  runSync({ manual: false });
 }
 function renderServiceStatus() {
   const wrap = document.querySelector("#service-status");

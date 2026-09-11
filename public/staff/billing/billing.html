@@ -300,6 +300,8 @@
         <div class="best-sellers" id="staff-performance" aria-label="Staff performance"></div>
         <div class="best-sellers-heading"><h3>Best-selling menu</h3><span>Highest to lowest sales</span></div>
         <div class="best-sellers" id="best-sellers" aria-label="Best-selling menu chart"></div>
+        <div class="best-sellers-heading"><h3>Transactions</h3><span>Every sale in this range — who, when, and what</span></div>
+        <div id="sales-transactions-list" style="display:flex;flex-direction:column;gap:10px;"></div>
       </div>
       <div class="settings-view" id="guests-view">
         <div class="report-heading"><div class="settings-intro"><h3>Guest directory</h3><p>Saved guest details for future visits and offer campaigns.</p></div><button class="export-button" id="export-guests">⇩ <span>Export Excel</span></button></div>
@@ -389,7 +391,7 @@
     })();
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="app.js?v=40"></script>
+  <script src="app.js?v=41"></script>
   <script>
     // Registers the offline app-shell cache. Never touches /api/ calls (see
     // service-worker.js) — orders, sales, sync, and login behave exactly as
