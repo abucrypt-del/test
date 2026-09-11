@@ -102,6 +102,44 @@ async function upsertSales(db, snapshot) {
   }
 }
 
+async function upsertPrintedBills(db, snapshot) {
+  const bills = safeParse(snapshot["alyazi-printed-bills"]);
+  if (!Array.isArray(bills)) return;
+  // Append-only, same as cancellation logs — a printed receipt never
+  // changes after the fact, so ON CONFLICT just no-ops.
+  const stmts = bills
+    .filter(bill => bill && bill.id)
+    .map(bill => db.prepare(
+      `INSERT INTO printed_bills (legacy_id, html, original_html, guest, phone, total, created_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+       ON CONFLICT(legacy_id) DO NOTHING`
+    ).bind(bill.id, bill.html ?? "", bill.originalHtml ?? bill.html ?? "", bill.guest ?? "",
+      bill.phone ?? "", bill.total ?? 0, bill.createdAt ?? new Date().toISOString()));
+  if (stmts.length) await db.batch(stmts);
+}
+
+// Small config blobs that change rarely (a Super Admin or Admin editing
+// settings) — whole-value last-write-wins, not per-field merge. See
+// schema.sql for why that tradeoff is fine here. Split into two tiers
+// because these carry different sensitivity: role-permissions decides who
+// can do what, and service-open decides whether the public site is even
+// taking orders — both are Super Admin-only client-side, so writing them
+// through this generic endpoint has to enforce that server-side too, or an
+// Admin account (or a "User" account, per the check at the call site)
+// could grant itself capabilities a Super Admin never approved.
+const STAFF_SETTINGS_KEYS = ["alyazi-print-settings-v1", "alyazi-upi-accounts-v1", "alyazi-integrations"];
+const SUPER_ADMIN_SETTINGS_KEYS = ["alyazi-role-permissions-v1", "alyazi-service-open-v1"];
+
+async function upsertAppSettings(db, snapshot, keys) {
+  const stmts = keys
+    .filter(key => typeof snapshot[key] === "string")
+    .map(key => db.prepare(
+      `INSERT INTO app_settings (key, value, updated_at) VALUES (?1, ?2, datetime('now'))
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`
+    ).bind(key, snapshot[key]));
+  if (stmts.length) await db.batch(stmts);
+}
+
 async function upsertCancellationLogs(db, snapshot) {
   const logs = safeParse(snapshot["alyazi-cancellation-logs-v1"]);
   if (!Array.isArray(logs)) return;
@@ -159,9 +197,14 @@ export async function onRequestPost({ request, env }) {
   if (staff.role !== "User") {
     await upsertMenuItems(db, body.data);
     await upsertCategories(db, body.data);
+    await upsertAppSettings(db, body.data, STAFF_SETTINGS_KEYS);
+  }
+  if (staff.role === "Super Admin") {
+    await upsertAppSettings(db, body.data, SUPER_ADMIN_SETTINGS_KEYS);
   }
   await upsertBookings(db, body.data);
   await upsertSales(db, body.data);
+  await upsertPrintedBills(db, body.data);
   await upsertResetRequests(db, body.data);
   await upsertCancellationLogs(db, body.data);
   return json({ ok: true, updatedAt: Date.now() });
@@ -235,6 +278,23 @@ export async function onRequestGet({ request, env }) {
     // ignore — falls back to empty, same as "no users synced yet"
   }
 
+  // Capped to the most recent 200 — unlike sales (kept in full for
+  // reporting), reprinting a months-old receipt isn't a real need, and this
+  // row includes full receipt HTML twice (current + original), so letting
+  // it grow unbounded would make every 3-second sync tick, from every
+  // device, pull an ever-growing multi-MB payload just for a rarely-used
+  // reprint feature.
+  const printedBillRows = await db.prepare("SELECT * FROM printed_bills ORDER BY id DESC LIMIT 200").all();
+  const printedBills = printedBillRows.results.map(row => ({
+    id: row.legacy_id, html: row.html, originalHtml: row.original_html || row.html,
+    guest: row.guest || "", phone: row.phone || "", total: row.total, createdAt: row.created_at,
+  })).reverse();
+
+  const settingsRows = await db.prepare(
+    `SELECT key, value FROM app_settings WHERE key IN (${[...STAFF_SETTINGS_KEYS, ...SUPER_ADMIN_SETTINGS_KEYS].map((_, i) => `?${i + 1}`).join(",")})`
+  ).bind(...STAFF_SETTINGS_KEYS, ...SUPER_ADMIN_SETTINGS_KEYS).all();
+  const settingsByKey = new Map(settingsRows.results.map(row => [row.key, row.value]));
+
   const resetRequestRows = await db.prepare("SELECT * FROM password_reset_requests ORDER BY id").all();
   const resetRequests = resetRequestRows.results.map(row => ({
     id: row.legacy_id, userId: row.user_id, userName: row.user_name, role: row.role, requestedAt: row.requested_at,
@@ -257,16 +317,22 @@ export async function onRequestGet({ request, env }) {
   // its own seed defaults. Send null instead when a table has nothing yet.
   const orNull = list => (list.length ? JSON.stringify(list) : null);
 
+  const data = {
+    "alyazi-menu-en-v6": orNull(menuItems),
+    "alyazi-categories-v1": orNull(categories),
+    "alyazi-bookings-v1": orNull(bookings),
+    "alyazi-sales-v1": orNull(sales),
+    "alyazi-printed-bills": orNull(printedBills),
+    "alyazi-users-v1": orNull(users),
+    "alyazi-cancellation-logs-v1": orNull(cancellationLogs),
+    "alyazi-password-reset-requests": orNull(resetRequests),
+  };
+  for (const key of [...STAFF_SETTINGS_KEYS, ...SUPER_ADMIN_SETTINGS_KEYS]) {
+    if (settingsByKey.has(key)) data[key] = settingsByKey.get(key);
+  }
+
   return json({
     ok: true,
-    data: {
-      "alyazi-menu-en-v6": orNull(menuItems),
-      "alyazi-categories-v1": orNull(categories),
-      "alyazi-bookings-v1": orNull(bookings),
-      "alyazi-sales-v1": orNull(sales),
-      "alyazi-users-v1": orNull(users),
-      "alyazi-cancellation-logs-v1": orNull(cancellationLogs),
-      "alyazi-password-reset-requests": orNull(resetRequests),
-    },
+    data,
   });
 }

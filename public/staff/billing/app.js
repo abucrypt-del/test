@@ -1103,7 +1103,7 @@ function renderPrintSheet(type, isReprint = false, itemsOverride = null, isAddit
   const html = `<div style="text-align:${printSettings.headerAlign}">${printSettings.showLogo ? '<img src="al-yazi-mandi-logo.png" alt="">' : ""}${printSettings.address ? `<p>${safe(printSettings.address)}</p>` : ""}${printSettings.phone ? `<p>Ph: ${safe(printSettings.phone)}</p>` : ""}${printSettings.whatsapp ? `<p>WhatsApp: ${safe(printSettings.whatsapp)}</p>` : ""}</div><hr><div style="text-align:center"><h2>${headerTitle}</h2>${receiptType ? `<p style="font-weight:bold;">${receiptType}</p>` : ""}</div>${guestInfo}${orderTypeLine}${locationLine}${orderNumberLine}${dateLine}<hr>${itemsBlock}${totalsBlock}${printSettings.footer ? `<hr><div style="text-align:${printSettings.footerAlign}"><p>${safe(printSettings.footer)}</p></div>` : ""}`;
   document.querySelector("#print-sheet").innerHTML = html;
   if (type === "bill" && !isReprint) {
-    printedBills.push({ html: html.replace("--- ORIGINAL ---", "--- COPY ---"), createdAt: new Date().toISOString(), guest: currentOrderGuestName, phone: currentOrderGuestPhone, total, originalHtml: html });
+    printedBills.push({ id: Date.now(), html: html.replace("--- ORIGINAL ---", "--- COPY ---"), createdAt: new Date().toISOString(), guest: currentOrderGuestName, phone: currentOrderGuestPhone, total, originalHtml: html });
     localStorage.setItem("alyazi-printed-bills", JSON.stringify(printedBills));
   }
 }
@@ -2242,6 +2242,42 @@ async function pullLiveDataFromCloud() {
     }
   }
 
+  const remoteBillsRaw = result?.data?.["alyazi-printed-bills"];
+  if (remoteBillsRaw) {
+    const remoteBills = JSON.parse(remoteBillsRaw);
+    const localIds = new Set(printedBills.map(bill => bill.id));
+    const fresh = remoteBills.filter(bill => !localIds.has(bill.id));
+    if (fresh.length) {
+      printedBills = [...printedBills, ...fresh];
+      localStorage.setItem("alyazi-printed-bills", JSON.stringify(printedBills));
+    }
+  }
+
+  // Small settings blobs — last-write-wins (see schema.sql). These have an
+  // in-memory cache (printSettings/upiAccounts) that has to be refreshed
+  // too, not just localStorage, or the running app keeps using the stale
+  // copy until the next full reload.
+  const remotePrintSettingsRaw = result?.data?.["alyazi-print-settings-v1"];
+  if (remotePrintSettingsRaw && remotePrintSettingsRaw !== localStorage.getItem("alyazi-print-settings-v1")) {
+    localStorage.setItem("alyazi-print-settings-v1", remotePrintSettingsRaw);
+    printSettings = JSON.parse(remotePrintSettingsRaw);
+    loadPrintSettings();
+    renderOrder();
+  }
+  const remoteUpiRaw = result?.data?.["alyazi-upi-accounts-v1"];
+  if (remoteUpiRaw && remoteUpiRaw !== localStorage.getItem("alyazi-upi-accounts-v1")) {
+    localStorage.setItem("alyazi-upi-accounts-v1", remoteUpiRaw);
+    upiAccounts = JSON.parse(remoteUpiRaw);
+    renderUpiAccounts();
+  }
+  // Role permissions, workflow integrations, and service-open/closed are
+  // all read fresh from localStorage on every use (no in-memory cache), so
+  // just keeping localStorage current is enough here.
+  ["alyazi-role-permissions-v1", "alyazi-integrations", "alyazi-service-open-v1"].forEach(key => {
+    const remoteValue = result?.data?.[key];
+    if (remoteValue && remoteValue !== localStorage.getItem(key)) localStorage.setItem(key, remoteValue);
+  });
+
   const remoteBookingsRaw = result?.data?.["alyazi-bookings-v1"];
   if (remoteBookingsRaw) {
     const remoteBookings = JSON.parse(remoteBookingsRaw);
@@ -2300,11 +2336,16 @@ async function runSync({ manual = false } = {}) {
 }
 
 document.querySelector("#sync-button")?.addEventListener("click", () => runSync({ manual: true }));
-// 2s was too aggressive once several devices could be open on the same
-// restaurant at once (each device hitting the shared sync endpoint every
-// tick) — 6s still shows a new booking within a few seconds, at a third
-// of the concurrent load.
-setInterval(() => runSync({ manual: false }), 6000);
+// A prior attempt at 2s was reverted as too aggressive once several devices
+// could be open on the same restaurant at once (each hitting the shared
+// sync endpoint every tick). Since then, the "did anything change" check
+// stopped re-serializing the whole local data blob every tick (see
+// collectSyncSnapshot), which was the main cost on an idle screen — but the
+// GET pull below still runs a handful of D1 reads every tick regardless.
+// 3s doubles that pull frequency across every open device; if the shared
+// endpoint starts struggling again under real multi-device load, this is
+// the first thing to dial back.
+setInterval(() => runSync({ manual: false }), 3000);
 runSync({ manual: false });
 
 // --- Topbar status strip: today's date, plus whether the restaurant is

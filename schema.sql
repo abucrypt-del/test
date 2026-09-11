@@ -117,11 +117,39 @@ CREATE TABLE IF NOT EXISTS cancellation_logs (
   created_at TEXT NOT NULL
 );
 
+-- Full reprintable receipt history (separate from `sales`, which is for
+-- revenue reporting) — was local-only per device before, so a device other
+-- than the one that took the order couldn't reprint its receipt.
+CREATE TABLE IF NOT EXISTS printed_bills (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  legacy_id INTEGER UNIQUE,
+  html TEXT NOT NULL,
+  original_html TEXT,
+  guest TEXT,
+  phone TEXT,
+  total REAL,
+  created_at TEXT NOT NULL
+);
+
+-- Small whole-value config blobs (print/receipt settings, UPI accounts,
+-- role permissions, workflow integrations, service open/closed) that used
+-- to be local-only per device. Last-write-wins by design — these change
+-- rarely (a Super Admin editing settings), so simple "whichever device
+-- saved most recently wins" is an acceptable tradeoff against the
+-- complexity of real per-field merge, and is a large improvement over the
+-- previous "doesn't sync at all" behavior.
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
 CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);
 CREATE INDEX IF NOT EXISTS idx_bookings_datetime ON bookings(datetime);
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
 CREATE INDEX IF NOT EXISTS idx_cancellation_logs_created_at ON cancellation_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_printed_bills_created_at ON printed_bills(created_at);
 
 -- Enforces "one active booking per cabin per slot" at the data layer, not
 -- just in application code — two simultaneous requests for the same
