@@ -497,6 +497,299 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 #change-password-form .save-button { margin-top: 10px; }
 @keyframes rise { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slide-in { from { opacity: 0; transform: translateX(7px); } to { opacity: 1; transform: translateX(0); } }
+
+.theme-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; max-width: 560px; }
+.theme-option { padding: 18px; border: 2px solid var(--line); border-radius: 12px; background: var(--panel); text-align: left; transition: border-color .15s, transform .15s; }
+.theme-option:hover { transform: translateY(-2px); }
+.theme-option.active { border-color: var(--sage-dark); }
+.theme-swatches { display: flex; gap: 6px; margin-bottom: 12px; }
+.theme-swatches span { width: 22px; height: 22px; border-radius: 50%; display: block; }
+.theme-option strong { display: block; font-size: 14px; color: var(--ink); }
+.theme-option small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+
+/* ============================================================
+   "Modern" theme — pulled from a referenced mobile POS/dashboard
+   design: white surfaces, near-black cards and pills, a bright
+   lime-yellow accent, and much heavier corner rounding throughout.
+   Pure additive override layer, gated entirely behind
+   [data-theme="modern"] on <html> — the default "Classic" look
+   (and printing, which never reads data-theme at all) is untouched
+   byte-for-byte when this attribute isn't set. See app.js
+   applyAppTheme()/THEMES for how the attribute gets set and saved.
+   ============================================================ */
+[data-theme="modern"] {
+  --ink: #111111;
+  --muted: #86887f;
+  --line: #eceee7;
+  --paper: #ffffff;
+  --panel: #ffffff;
+  --sage: #1c1c1c;
+  --sage-dark: #0a0a0a;
+  --coral: #e5484d;
+  --gold: #111111;
+  --accent: #d8f24a;
+  --accent-ink: #10130a;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 26px;
+  --radius-pill: 999px;
+  font-family: "Plus Jakarta Sans", "DM Sans", sans-serif;
+}
+[data-theme="modern"] body { background: var(--paper); }
+[data-theme="modern"] h1, [data-theme="modern"] h2,
+[data-theme="modern"] .card-content h3, [data-theme="modern"] .settings-heading h2,
+[data-theme="modern"] .report-summary strong, [data-theme="modern"] .payment-total strong {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+[data-theme="modern"] .brand strong { font-family: "Plus Jakarta Sans", sans-serif; font-style: normal; font-weight: 800; }
+[data-theme="modern"] .topbar { background: #ffffff; }
+[data-theme="modern"] .menu-panel { background: var(--paper); }
+
+/* Pills: nav tabs, filters, form buttons — the reference's signature
+   fully-rounded "stadium" shape used almost everywhere interactive. */
+[data-theme="modern"] .cabin-tab,
+[data-theme="modern"] .settings-tab,
+[data-theme="modern"] .outline-button,
+[data-theme="modern"] .secondary-action,
+[data-theme="modern"] .save-button,
+[data-theme="modern"] .new-takeaway-btn,
+[data-theme="modern"] .payment-method,
+[data-theme="modern"] .report-range,
+[data-theme="modern"] .voice-menu-button,
+[data-theme="modern"] .close-button,
+[data-theme="modern"] .add-button,
+[data-theme="modern"] .test-button,
+[data-theme="modern"] .export-button {
+  border-radius: var(--radius-pill) !important;
+}
+[data-theme="modern"] input, [data-theme="modern"] select {
+  border-radius: var(--radius-sm) !important;
+}
+/* .menu-search and .voice-menu-button hardcode their own warm gold
+   colors (not the --sage/--gold variables), so the variable overrides
+   above never touched them — needs its own override, not just radius. */
+[data-theme="modern"] .menu-search {
+  border-radius: var(--radius-pill) !important;
+  border-color: var(--line) !important;
+  background: #f5f5f1 !important;
+  color: var(--ink) !important;
+}
+[data-theme="modern"] .menu-search::placeholder { color: #9a9c93 !important; }
+[data-theme="modern"] .menu-search:focus { border-color: var(--sage-dark) !important; box-shadow: 0 0 0 3px rgba(10,10,10,.08) !important; }
+[data-theme="modern"] .voice-menu-button {
+  border-radius: 50% !important;
+  border-color: var(--line) !important;
+  background: #f5f5f1 !important;
+  color: var(--ink) !important;
+}
+[data-theme="modern"] .voice-menu-button.listening {
+  border-color: var(--coral) !important;
+  background: #fdeceb !important;
+  color: var(--coral) !important;
+}
+
+/* Cards: menu items, list rows, modals — generous rounding instead of
+   the classic theme's tighter 4-8px corners. */
+[data-theme="modern"] .menu-card,
+[data-theme="modern"] .receipt-item,
+[data-theme="modern"] .best-seller-row,
+[data-theme="modern"] .account-menu,
+[data-theme="modern"] .settings-modal,
+[data-theme="modern"] .payment-modal,
+[data-theme="modern"] .whatsapp-card,
+[data-theme="modern"] .report-summary div,
+[data-theme="modern"] .payment-total,
+[data-theme="modern"] #booking-modal .settings-modal,
+[data-theme="modern"] #reminder-modal .settings-modal {
+  border-radius: var(--radius-lg) !important;
+}
+[data-theme="modern"] .food-image { border-radius: var(--radius-md) var(--radius-md) 0 0 !important; }
+[data-theme="modern"] .menu-card { border-color: var(--line); box-shadow: 0 1px 2px rgba(17,17,17,.04); }
+[data-theme="modern"] .menu-card:hover { box-shadow: 0 16px 32px rgba(17,17,17,.1); }
+[data-theme="modern"] .settings-modal { background: #ffffff; border-color: var(--line); }
+
+/* High-contrast black pills for active/primary state, matching the
+   reference's black segmented tabs and dark floating cards. */
+[data-theme="modern"] .cabin-tab.active,
+[data-theme="modern"] .settings-tab.active,
+[data-theme="modern"] .payment-method.active,
+[data-theme="modern"] .report-range.active {
+  background: var(--sage-dark) !important;
+  border-color: var(--sage-dark) !important;
+  color: #ffffff !important;
+}
+[data-theme="modern"] .settings-tab.active:after { display: none; }
+/* Settings tabs had zero horizontal padding (fine for an underline
+   indicator, not for a filled pill) and could wrap to two lines for
+   longer labels ("Menu & pricing", "Booking Management") — border-radius:
+   999px on a two-line-tall box makes a vertical oval instead of a
+   horizontal pill, so some tabs looked round and others looked stretched.
+   Forcing one line + real padding + a tighter gap makes every tab the
+   same height and shape regardless of label length. */
+[data-theme="modern"] .settings-tabs { gap: 8px !important; border-bottom: none !important; overflow-x: auto; scrollbar-width: none; }
+[data-theme="modern"] .settings-tabs::-webkit-scrollbar { display: none; }
+/* That thin line above the tabs is .settings-heading's own border-bottom
+   (the divider under the "Settings" title), not something on the tabs
+   themselves — pill tabs with their own background don't need a divider
+   above them the way plain underline-tabs did. */
+[data-theme="modern"] .settings-heading { border-bottom: none !important; }
+/* Buttons' default focus ring (browser blue outline) looks out of place
+   against the theme's own black/lime palette — swap it for a subtle dark
+   ring that still shows keyboard focus without clashing. */
+[data-theme="modern"] button:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(10,10,10,.25) !important;
+}
+[data-theme="modern"] .settings-tab {
+  padding: 11px 18px !important;
+  white-space: nowrap !important;
+  background: #f2f2ee !important;
+}
+/* Category tabs were an underline-indicator style — switched to filled
+   pill chips (background + rounded, no underline) to match the
+   reference's segmented tab look. */
+[data-theme="modern"] .category-tabs { gap: 8px !important; border-bottom: none !important; padding-bottom: 2px; }
+[data-theme="modern"] .category-tab {
+  padding: 9px 16px !important;
+  border-radius: var(--radius-pill) !important;
+  background: #f2f2ee !important;
+}
+[data-theme="modern"] .category-tab.active {
+  background: var(--sage-dark) !important;
+  color: #ffffff !important;
+}
+[data-theme="modern"] .category-tab.active span { color: rgba(255,255,255,.65) !important; }
+[data-theme="modern"] .category-tab:not(.active) span { color: #a3a59b !important; }
+[data-theme="modern"] .category-tab.active:after { display: none !important; }
+
+/* Lime accent reserved for the one or two things that most need a tap
+   right now — adding an item and completing a payment — same role it
+   plays in the reference (the "Pay" button, the "Dues" chip). */
+[data-theme="modern"] .add-button {
+  background: var(--accent) !important;
+  color: var(--accent-ink) !important;
+}
+[data-theme="modern"] .add-button:hover { background: #c7e232 !important; transform: scale(1.08); }
+[data-theme="modern"] #complete-payment:not(:disabled) {
+  background: var(--accent) !important;
+  color: var(--accent-ink) !important;
+  border-radius: var(--radius-pill) !important;
+  font-weight: 700;
+}
+[data-theme="modern"] .chart-bar { background: var(--sage-dark); }
+[data-theme="modern"] .item-count { background: var(--accent-ink); }
+
+[data-theme="modern"] .cabin-header h3,
+[data-theme="modern"] .settings-button:first-letter,
+[data-theme="modern"] .icon-button:hover,
+[data-theme="modern"] .reset-request-action { color: var(--sage-dark); }
+[data-theme="modern"] .new-takeaway-btn { border-style: solid; border-color: var(--line); color: var(--ink); }
+[data-theme="modern"] .new-takeaway-btn:hover { background: #f6f6f2; }
+/* More hardcoded warm-tinted colors (not variables), same issue as
+   .menu-search above — .secondary-action in particular is used all over
+   (Send KOT, Reprint, cancel actions, etc.) so this one matters a lot. */
+[data-theme="modern"] .secondary-action, [data-theme="modern"] .board-card-action {
+  background: #f2f2ee !important;
+  border-color: var(--line) !important;
+  color: var(--ink) !important;
+}
+[data-theme="modern"] .secondary-action:not(:disabled):hover { background: #e9e9e3 !important; border-color: #d4d4cc !important; }
+[data-theme="modern"] .cabin-tab:hover { background: #f6f6f2 !important; }
+/* .cabin-tab:hover and .cabin-tab.active have equal specificity, so
+   without this, hovering the ACTIVE cabin let the light hover background
+   win while the active rule's white text stayed — invisible text. This
+   selector is more specific than both, so it wins regardless of order. */
+[data-theme="modern"] .cabin-tab.active:hover {
+  background: var(--sage-dark) !important;
+  border-color: var(--sage-dark) !important;
+  color: #ffffff !important;
+}
+/* Settings button was plain text with no button shape at all — give it
+   an actual rounded pill so it reads as tappable, like the reference's
+   icon buttons. */
+[data-theme="modern"] .settings-button {
+  padding: 9px 16px !important;
+  border-radius: var(--radius-pill) !important;
+  background: #f2f2ee !important;
+}
+[data-theme="modern"] .settings-button:hover { background: #ececea !important; }
+[data-theme="modern"] .order-modes { border-radius: var(--radius-pill) !important; background: #f2f2ee !important; }
+[data-theme="modern"] .order-mode { border-radius: var(--radius-pill) !important; }
+[data-theme="modern"] .order-mode.active { background: #ffffff !important; color: var(--ink) !important; }
+[data-theme="modern"] .guest-details { border-radius: var(--radius-md) !important; background: #f7f7f4 !important; border-color: var(--line) !important; }
+[data-theme="modern"] .guest-details input { border-radius: var(--radius-pill) !important; }
+/* These containers already clip their contents (overflow hidden/auto),
+   just at the classic theme's tighter 4px radius — bumping it here is
+   enough to round the header/first row inside without touching every
+   individual row, which would look inconsistent for a stacked list. */
+[data-theme="modern"] .menu-table-wrap,
+[data-theme="modern"] .guest-directory-list {
+  border-radius: var(--radius-lg) !important;
+  border-color: var(--line) !important;
+}
+[data-theme="modern"] .role-legend div {
+  border-radius: var(--radius-md) !important;
+  border-color: var(--line) !important;
+  background: #f7f7f4 !important;
+}
+/* al-yazi-mandi-logo.png is a flat single-color PNG (warm charcoal-brown)
+   on a transparent background, not live text — can't recolor it with a
+   CSS color property, but brightness(0) turns every non-transparent
+   pixel pure black regardless of its original color, which reads as the
+   theme's --ink on the modern theme's white header. */
+[data-theme="modern"] .brand-logo { filter: brightness(0); }
+/* h1/h2 kept the classic theme's line-height: 1.02 even after switching
+   font-family to Plus Jakarta Sans — that's tight enough that on mobile
+   (where .menu-panel's top padding is smaller too) the heading's own
+   ascenders were getting visually clipped at the top instead of just
+   looking snug like they do on the wide desktop layout. */
+[data-theme="modern"] h1, [data-theme="modern"] h2 { line-height: 1.15 !important; }
+@media (max-width: 600px) {
+  /* Classic theme stacks the search bar above the mic button on mobile
+     (flex-direction: column) — with the modern theme's pill search bar
+     that just wastes vertical space for no benefit; keep them side by
+     side like the reference's mobile search+action rows. */
+  [data-theme="modern"] .header-actions { flex-direction: row !important; align-items: center !important; }
+  [data-theme="modern"] .menu-search { max-width: none; flex: 1; }
+  /* Settings tabs default to a horizontally-scrolling pill row (fine on
+     desktop) — on a phone that means most tabs are scrolled off-screen
+     with no visual hint more exist. Stacked vertically instead. */
+  [data-theme="modern"] .settings-tabs { flex-direction: column !important; align-items: flex-start !important; overflow-x: visible !important; }
+  /* On mobile .welcome-row switches from a side-by-side flex layout to
+     plain block stacking (see the base @media rule), which left zero
+     gap between the subtitle and the search row right below it — the
+     two read as one cramped block instead of separate sections. */
+  [data-theme="modern"] .header-actions { margin-top: 18px; }
+  [data-theme="modern"] .eyebrow { margin-bottom: 8px; }
+  [data-theme="modern"] h1 { margin-bottom: 2px; }
+}
+[data-theme="modern"] .takeaway-tab .takeaway-status { background: #ececea !important; color: var(--ink) !important; }
+[data-theme="modern"] .pay-upfront-action { border-color: var(--line) !important; background: #f2f2ee !important; color: var(--ink) !important; }
+[data-theme="modern"] .pay-upfront-action:not(:disabled):hover { border-color: var(--accent) !important; background: #f2f6d8 !important; }
+[data-theme="modern"] .cancel-takeaway-action { border-color: #f2c9c2 !important; background: #fdeeec !important; color: var(--coral) !important; }
+[data-theme="modern"] .close-button,
+[data-theme="modern"] .order-modes,
+[data-theme="modern"] .guest-picker button,
+[data-theme="modern"] kbd,
+[data-theme="modern"] .menu-table th,
+[data-theme="modern"] .user-table th,
+[data-theme="modern"] .role-permission-page-row td {
+  background: #f2f2ee !important;
+}
+[data-theme="modern"] .file-upload-btn:hover { background: #ececea !important; }
+[data-theme="modern"] .staff-avatar, [data-theme="modern"] .upi-bank-icon {
+  background: #111111 !important; color: #ffffff !important;
+}
+/* --coral now means "error/destructive", not "decorative accent" — the
+   handful of purely-decorative uses (this eyebrow label, the brand's
+   small caps tagline) need their own neutral color instead of inheriting
+   what's now a red. */
+[data-theme="modern"] .eyebrow, [data-theme="modern"] .brand small { color: var(--muted) !important; }
+[data-theme="modern"] .whatsapp-card, [data-theme="modern"] .report-summary div, [data-theme="modern"] .payment-total {
+  background: #f7f7f4; border-color: var(--line);
+}
 @media (max-width: 950px) { .workspace { grid-template-columns: 1fr; } .ticket-panel { min-height: 510px; border-top: 1px solid var(--line); border-left: 0; } .ticket-header { padding-top: 32px; } }
 @media (max-width: 950px) { .ticket-panel { min-height: 0; } .order-list { min-height: 160px; } }
 @media (max-width: 600px) { .topbar { height: 65px; padding: 0 20px; } .service-status, .settings-button span, .sync-status { display: none; } .sync-widget { border-right: none; padding-right: 0; } .topbar-actions { gap: 13px; } .menu-panel { padding: 34px 20px 48px; } .welcome-row { display: block; } .outline-button { margin-top: 24px; } .category-tabs { margin-top: 32px; gap: 20px; } .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; } .menu-card { min-height: 242px; } .food-image { height: 110px; } .card-content { padding: 11px; } .card-content h3 { font-size: 15px; } .card-content p { font-size: 10px; } .ticket-header, .order-list, .ticket-footer { padding-left: 20px; padding-right: 20px; } .order-modes { margin-left: 20px; margin-right: 20px; } .guest-picker { margin-left: 20px; margin-right: 20px; } .settings-modal { max-height: 95vh; } .settings-heading, .settings-view { padding-left: 20px; padding-right: 20px; } .settings-tabs { padding: 0 20px; } .form-grid, .add-menu-form { grid-template-columns: 1fr 1fr; } .form-grid label:first-child { grid-column: span 2; } .add-menu-form .save-button { grid-column: span 2; } }

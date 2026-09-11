@@ -7,9 +7,17 @@
   <title>AL YAZI MANDI RESTRAUNT | Restaurant POS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Pirata+One&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=23" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Pirata+One&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=25" />
   <link rel="manifest" href="manifest.json" />
+  <script>
+    // Applied here, before <body> paints, so switching themes doesn't
+    // flash the other theme for a frame on every reload.
+    try {
+      var savedTheme = localStorage.getItem("alyazi-app-theme-v1");
+      if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+    } catch (err) {}
+  </script>
   <script>
     // Server session is authoritative. sessionStorage only carries display
     // metadata for this device and is never an access control — a forged
@@ -221,7 +229,7 @@
   <div class="modal-backdrop" id="settings-modal" hidden>
     <section class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <div class="settings-heading"><div><p class="eyebrow">Restaurant control</p><h2 id="settings-title">Settings</h2></div><button class="close-button" id="close-settings" aria-label="Close settings">×</button></div>
-      <div class="settings-tabs"><button class="settings-tab active" data-settings-tab="my-sales">My Sales</button><button class="settings-tab" data-settings-tab="printers">Printers</button><button class="settings-tab" data-settings-tab="menu-settings">Menu & pricing</button><button class="settings-tab" data-settings-tab="users">Users</button><button class="settings-tab" data-settings-tab="sales">Sales reports</button><button class="settings-tab super-admin-only" data-settings-tab="guests" hidden>Guests</button><button class="settings-tab" data-settings-tab="receipts">Receipt History</button><button class="settings-tab" data-settings-tab="bookings">Booking Management</button><button class="settings-tab super-admin-only" data-settings-tab="logs" hidden>Logs</button></div>
+      <div class="settings-tabs"><button class="settings-tab active" data-settings-tab="my-sales">My Sales</button><button class="settings-tab" data-settings-tab="printers">Printers</button><button class="settings-tab" data-settings-tab="menu-settings">Menu & pricing</button><button class="settings-tab" data-settings-tab="users">Users</button><button class="settings-tab" data-settings-tab="sales">Sales reports</button><button class="settings-tab super-admin-only" data-settings-tab="guests" hidden>Guests</button><button class="settings-tab" data-settings-tab="receipts">Receipt History</button><button class="settings-tab" data-settings-tab="bookings">Booking Management</button><button class="settings-tab super-admin-only" data-settings-tab="logs" hidden>Logs</button><button class="settings-tab" data-settings-tab="themes">Themes</button></div>
       <div class="settings-view active" id="my-sales-view">
         <div class="settings-intro"><h3>My Sales</h3><p>Your own sales performance — day, week, or month.</p></div>
         <div class="report-range-tabs" id="my-sales-range-tabs"><button class="report-range active" data-range="day">Today</button><button class="report-range" data-range="week">This week</button><button class="report-range" data-range="month">This month</button></div>
@@ -319,6 +327,19 @@
         <div class="report-heading"><div class="settings-intro"><h3>Logs</h3><p>Every ticket and booking cancellation, with who cancelled it and when. Visible to Super Admin only.</p></div><button class="export-button" id="export-logs">⇩ <span>Export Excel</span></button></div>
         <div id="cancellation-logs-list" style="display:flex;flex-direction:column;gap:10px;"></div>
       </div>
+      <div class="settings-view" id="themes-view">
+        <div class="settings-intro"><h3>Themes</h3><p>Choose how the app looks on this device. Doesn't affect printed receipts.</p></div>
+        <div class="theme-options" id="theme-options">
+          <button class="theme-option" data-theme-option="classic">
+            <div class="theme-swatches"><span style="background:#f5efe5"></span><span style="background:#31594d"></span><span style="background:#b95e3f"></span><span style="background:#c79545"></span></div>
+            <strong>Classic</strong><small>The original warm, editorial look</small>
+          </button>
+          <button class="theme-option" data-theme-option="modern">
+            <div class="theme-swatches"><span style="background:#ffffff;border:1px solid #e4e4e0"></span><span style="background:#0a0a0a"></span><span style="background:#d8f24a"></span><span style="background:#111111"></span></div>
+            <strong>Modern</strong><small>Bright, rounded, high-contrast</small>
+          </button>
+        </div>
+      </div>
     </section>
   </div>
   <div id="print-sheet" aria-hidden="true"></div>
@@ -391,7 +412,7 @@
     })();
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="app.js?v=41"></script>
+  <script src="app.js?v=42"></script>
   <script>
     // Registers the offline app-shell cache. Never touches /api/ calls (see
     // service-worker.js) — orders, sales, sync, and login behave exactly as

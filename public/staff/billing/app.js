@@ -1586,6 +1586,30 @@ function renderCancellationLogs() {
   }).join("");
 }
 
+// Per-device display preference, not synced — see the inline <script> at
+// the top of billing.html's <head> for why the initial value is applied
+// there instead of here (avoids a flash of the other theme on load).
+function getAppTheme() {
+  return localStorage.getItem("alyazi-app-theme-v1") || "classic";
+}
+function applyAppTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem("alyazi-app-theme-v1", theme);
+}
+function renderThemeOptions() {
+  const current = getAppTheme();
+  document.querySelectorAll(".theme-option").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.themeOption === current);
+  });
+}
+document.querySelector("#theme-options")?.addEventListener("click", event => {
+  const option = event.target.closest(".theme-option");
+  if (!option) return;
+  applyAppTheme(option.dataset.themeOption);
+  renderThemeOptions();
+  showToast(`${option.querySelector("strong").textContent} theme applied`);
+});
+
 const settingsModal = document.querySelector("#settings-modal");
 function applySettingsAccessForRole() {
   const role = currentUser.role;
@@ -1624,6 +1648,7 @@ document.querySelectorAll(".settings-tab").forEach(tab => tab.addEventListener("
   if (tab.dataset.settingsTab === "receipts") renderReceiptHistory();
   if (tab.dataset.settingsTab === "bookings") renderBookingsList();
   if (tab.dataset.settingsTab === "logs") renderCancellationLogs();
+  if (tab.dataset.settingsTab === "themes") renderThemeOptions();
 }));
 document.querySelectorAll(".report-range").forEach(button => button.addEventListener("click", () => {
   const group = button.parentElement;
