@@ -2224,6 +2224,24 @@ async function pullLiveDataFromCloud() {
     }
   }
 
+  // Same gap as menu items, and a much bigger deal here: a sale rung up on
+  // one device (e.g. a cashier's "User" account) never reached any other
+  // device's local sales — so Super Admin's own Sales Reports, reading only
+  // its own local `sales` array, could look like that revenue never
+  // happened at all, when it was sitting in D1 the whole time.
+  const remoteSalesRaw = result?.data?.["alyazi-sales-v1"];
+  if (remoteSalesRaw) {
+    const remoteSales = JSON.parse(remoteSalesRaw);
+    const localIds = new Set(sales.map(sale => sale.id));
+    const fresh = remoteSales.filter(sale => !localIds.has(sale.id));
+    if (fresh.length) {
+      sales = [...sales, ...fresh];
+      localStorage.setItem("alyazi-sales-v1", JSON.stringify(sales));
+      renderSales();
+      renderMySales();
+    }
+  }
+
   const remoteBookingsRaw = result?.data?.["alyazi-bookings-v1"];
   if (remoteBookingsRaw) {
     const remoteBookings = JSON.parse(remoteBookingsRaw);
