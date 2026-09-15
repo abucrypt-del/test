@@ -19,6 +19,47 @@
     } catch (err) {}
   </script>
   <script>
+    // TEMPORARY diagnostic for the "taps inside Settings do nothing on
+    // mobile" report — only active with ?tapdebug=1 in the URL, so it can
+    // never affect a normal staff session. Shows, right on screen, exactly
+    // which element every touchstart/touchend/click actually lands on, so
+    // we can tell whether the tap is even reaching the settings-tab button
+    // versus landing on something else (or nothing) entirely. Remove this
+    // whole block once the real bug is found.
+    if (new URLSearchParams(location.search).get("tapdebug") === "1") {
+      window.addEventListener("DOMContentLoaded", function() {
+        var box = document.createElement("div");
+        box.id = "tapdebug-box";
+        box.style.cssText = "position:fixed;left:0;right:0;bottom:0;max-height:45vh;overflow:auto;" +
+          "background:#000;color:#0f0;font:11px/1.4 monospace;padding:8px;z-index:999999;white-space:pre-wrap;";
+        document.body.appendChild(box);
+        function describe(el) {
+          if (!el || el === document || el === window) return String(el);
+          var s = el.tagName || "?";
+          if (el.id) s += "#" + el.id;
+          if (el.className && typeof el.className === "string") s += "." + el.className.trim().replace(/\s+/g, ".");
+          var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+          if (r) s += " [" + Math.round(r.left) + "," + Math.round(r.top) + " " + Math.round(r.width) + "x" + Math.round(r.height) + "]";
+          return s;
+        }
+        function log(label, e) {
+          var el = document.elementFromPoint(
+            e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX,
+            e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY
+          );
+          var line = label + " target=" + describe(e.target) + " elementFromPoint=" + describe(el) + " defaultPrevented=" + e.defaultPrevented;
+          var p = document.createElement("div");
+          p.textContent = new Date().toISOString().slice(11, 19) + " " + line;
+          box.appendChild(p);
+          box.scrollTop = box.scrollHeight;
+        }
+        ["touchstart", "touchend", "click"].forEach(function(type) {
+          document.addEventListener(type, function(e) { log(type, e); }, true);
+        });
+      });
+    }
+  </script>
+  <script>
     // Server session is authoritative. sessionStorage only carries display
     // metadata for this device and is never an access control — a forged
     // sessionStorage entry (e.g. via devtools) no longer grants access,
