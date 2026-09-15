@@ -56,6 +56,22 @@
         ["touchstart", "touchend", "click"].forEach(function(type) {
           document.addEventListener(type, function(e) { log(type, e); }, true);
         });
+        function logError(prefix, text) {
+          var p = document.createElement("div");
+          p.style.color = "#f55";
+          p.style.fontWeight = "bold";
+          p.textContent = new Date().toISOString().slice(11, 19) + " " + prefix + ": " + text;
+          box.appendChild(p);
+          box.scrollTop = box.scrollHeight;
+        }
+        window.addEventListener("error", function(e) {
+          var err = e.error;
+          logError("JS ERROR", (err && (err.stack || err.message)) || e.message || "unknown error");
+        });
+        window.addEventListener("unhandledrejection", function(e) {
+          var reason = e.reason;
+          logError("UNHANDLED REJECTION", (reason && (reason.stack || reason.message)) || String(reason));
+        });
       });
     }
   </script>
