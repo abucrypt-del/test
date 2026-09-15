@@ -941,7 +941,25 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
    only which ones are visible, and how the tab list looks, changes.
    ------------------------------------------------------------ */
 @media (max-width: 600px) {
-  .settings-modal { width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+  /* .settings-modal is a grid item of .modal-backdrop (display:grid;
+     place-items:center — which does NOT stretch items, so a plain
+     height:100% here has no well-defined percentage basis and different
+     engines can resolve it inconsistently). It's also indirectly sized off
+     .modal-backdrop's position:fixed;inset:0, which mobile Safari sizes
+     against the *layout* viewport (assumes the address bar is collapsed),
+     not the shorter *visual* viewport actually on screen while the address
+     bar is showing — the two can disagree by the address bar's height. In
+     combination this can make the panel paint as a normal full screen while
+     its real, hit-testable box is taller/offset from what's visible, so
+     taps that look like they land on a row hit nothing. Taking the panel
+     out of the grid's sizing entirely and pinning it to the viewport
+     directly (with a dvh fallback, which does track the visual viewport)
+     removes both sources of mismatch. */
+  .settings-modal {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%; height: 100dvh;
+    max-height: none; border-radius: 0;
+  }
   .settings-heading-titles { display: flex; align-items: center; gap: 10px; }
   .settings-mobile-back { width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; background: #f2f2ee; color: var(--ink); font-size: 16px; }
   .settings-heading h2 { font-size: 28px; }
