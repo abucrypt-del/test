@@ -144,12 +144,29 @@ CREATE TABLE IF NOT EXISTS app_settings (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Public on-site reviews submitted from al-yazi.com's marketing site (see
+-- site-src/src/App.tsx's Reviews section, functions/api/reviews/*).
+-- Google does not let a third party post to a customer's own Google
+-- Business Profile on their behalf, so this table only backs the
+-- on-site testimonial display — after submitting here, the guest is
+-- separately invited to also share the same review on Google directly,
+-- signed into their own account.
+CREATE TABLE IF NOT EXISTS reviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  legacy_id INTEGER UNIQUE,
+  name TEXT NOT NULL,
+  rating INTEGER NOT NULL,
+  comment TEXT,
+  created_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
 CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at);
 CREATE INDEX IF NOT EXISTS idx_bookings_datetime ON bookings(datetime);
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
 CREATE INDEX IF NOT EXISTS idx_cancellation_logs_created_at ON cancellation_logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_printed_bills_created_at ON printed_bills(created_at);
+CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at);
 
 -- Enforces "one active booking per cabin per slot" at the data layer, not
 -- just in application code — two simultaneous requests for the same

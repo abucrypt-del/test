@@ -61,6 +61,14 @@ const CALL_NUMBERS = [
 ];
 
 const waHref = (intl: string, message?: string) => `https://wa.me/${intl}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
+
+// Resolved from the restaurant's Google Maps CID (the hex id in its Maps
+// URL, converted to decimal) — the only reliable non-API way to deep-link
+// straight to this specific Google Business listing. Used to invite guests
+// to also share their review on Google right after they submit one here;
+// see the Reviews section below for why that's an invitation, not an
+// automatic repost — Google doesn't allow the latter.
+const GOOGLE_REVIEWS_URL = 'https://www.google.com/maps?cid=4923056055175494641';
 const telHref = (intl: string) => `tel:+${intl}`;
 
 function useClickOutside(open: boolean, onOutside: () => void) {
@@ -96,7 +104,7 @@ function CallButton({ label, className }: { label: ReactNode; className: string 
 
 function Navigation({ onReserve }: { onReserve: () => void }) {
   const [open, setOpen] = useState(false);
-  const links = [['Story', '#story'], ['Menu', '#menu'], ['The ritual', '#ritual'], ['Gatherings', '#catering']];
+  const links = [['Story', '#story'], ['Menu', '#menu'], ['The ritual', '#ritual'], ['Gatherings', '#catering'], ['Reviews', '#reviews']];
   return <header className="absolute inset-x-0 top-0 z-30 text-[#f9f3e9]">
     <div className="mx-auto flex max-w-[1280px] items-center justify-between px-5 py-5 md:px-10">
       <a data-testid="link-logo-home" href="#top" className="shrink-0"><Logo light /></a>
@@ -603,6 +611,149 @@ function ReservationModal({ onClose }: { onClose: () => void }) {
   </div>;
 }
 
+// ---------------------------------------------------------------------------
+// Reviews
+// ---------------------------------------------------------------------------
+
+type ReviewEntry = { id: number; name: string; rating: number; comment: string | null; createdAt: string };
+
+function StarRow({ rating, size = 14 }: { rating: number; size?: number }) {
+  return <span className="flex gap-0.5 text-[#e3b56d]" aria-label={`${rating} out of 5 stars`}>
+    {[1, 2, 3, 4, 5].map((n) => <Star key={n} size={size} fill={n <= rating ? 'currentColor' : 'none'} strokeWidth={n <= rating ? 0 : 1.5} className={n <= rating ? '' : 'text-[#d8c7b2]'} />)}
+  </span>;
+}
+
+function StarPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const [hover, setHover] = useState(0);
+  const shown = hover || value;
+  return <div className="flex gap-1" role="radiogroup" aria-label="Your rating" onMouseLeave={() => setHover(0)}>
+    {[1, 2, 3, 4, 5].map((n) => (
+      <button key={n} type="button" data-testid={`button-review-star-${n}`} role="radio" aria-checked={value === n}
+        onClick={() => onChange(n)} onMouseEnter={() => setHover(n)}
+        className="p-1 text-[#e3b56d] transition-transform hover:scale-110">
+        <Star size={28} fill={n <= shown ? 'currentColor' : 'none'} strokeWidth={n <= shown ? 0 : 1.5} className={n <= shown ? '' : 'text-[#d8c7b2]'} />
+      </button>
+    ))}
+  </div>;
+}
+
+function timeAgo(iso: string): string {
+  const then = new Date(iso.includes('T') ? iso : `${iso.replace(' ', 'T')}Z`).getTime();
+  const days = Math.floor((Date.now() - then) / 86400000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months > 1 ? 's' : ''} ago`;
+  const years = Math.floor(months / 12);
+  return `${years} year${years > 1 ? 's' : ''} ago`;
+}
+
+function Reviews() {
+  const [reviews, setReviews] = useState<ReviewEntry[]>([]);
+  const [name, setName] = useState('');
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [website, setWebsite] = useState(''); // honeypot — left empty by real visitors
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/reviews/list').then((r) => r.json())
+      .then((result) => { if (!cancelled && result?.ok) setReviews(result.reviews); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [done]);
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setErrorMsg('');
+    if (!name.trim()) { setErrorMsg('Please tell us your name.'); return; }
+    if (!rating) { setErrorMsg('Pick a star rating.'); return; }
+    setSubmitting(true);
+    try {
+      const resp = await fetch('/api/reviews/create', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), rating, comment: comment.trim(), website }),
+      });
+      const result = await resp.json();
+      if (!resp.ok || !result.ok) { setErrorMsg('Something went wrong — please try again.'); return; }
+      setDone(true);
+    } catch {
+      setErrorMsg('Could not reach the server — please check your connection and try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return <section id="reviews" className="bg-[#eee3d2] py-24 text-[#36231a] md:py-32">
+    <div className="mx-auto max-w-[1280px] px-5 md:px-10">
+      <Reveal>
+        <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-[.28em] text-[#ad542f]"><span className="h-px w-8 bg-[#ad542f]" /> From the table</div>
+        <h2 className="display mt-4 max-w-[600px] text-6xl leading-[.94] tracking-[-.045em] md:text-8xl">What guests<br /><span className="text-[#b85e36]">are saying.</span></h2>
+      </Reveal>
+
+      <div className="mt-14 grid gap-8 lg:grid-cols-[1.15fr_1fr] lg:gap-12">
+        <Reveal delay={80}>
+          {reviews.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {reviews.slice(0, 4).map((r) => (
+                <div key={r.id} data-testid={`card-review-${r.id}`} className="rounded-2xl border border-[#d8c7b2] bg-[#f5eee3] p-6">
+                  <StarRow rating={r.rating} />
+                  <p className="mt-3 text-sm leading-6 text-[#705346]">{r.comment || 'Loved the mandi here.'}</p>
+                  <p className="mt-4 text-xs font-bold uppercase tracking-[.12em] text-[#36231a]">{r.name}</p>
+                  <p className="mt-0.5 text-[11px] text-[#9b8170]">{timeAgo(r.createdAt)}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex h-full flex-col justify-center rounded-2xl border border-[#d8c7b2] bg-[#f5eee3] p-8">
+              <p className="text-base leading-7 text-[#705346]">Be the first to tell people what brought you back — every review here is written by a real guest, right after their meal.</p>
+            </div>
+          )}
+        </Reveal>
+
+        <Reveal delay={140}>
+          <div className="rounded-[1.25rem] border border-[#d8c7b2] bg-[#f5eee3] p-7 md:p-9">
+            {done ? (
+              <div className="text-center">
+                <Check className="mx-auto mb-3 text-[#40522c]" size={28} />
+                <h3 className="display text-3xl">Thank you for the review.</h3>
+                <p className="mt-3 text-sm leading-6 text-[#705346]">It's now showing on our site. Mind sharing the same review on Google too? It takes ten seconds and helps other people find their way to us.</p>
+                <a data-testid="link-share-google-review" href={GOOGLE_REVIEWS_URL} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#ad542f] px-6 py-3.5 text-sm font-bold text-[#f9f3e9] transition-transform hover:-translate-y-1">
+                  Share on Google <ArrowRight size={16} />
+                </a>
+                <button data-testid="button-review-another" onClick={() => { setDone(false); setName(''); setRating(0); setComment(''); }} className="mt-5 block w-full text-xs font-bold uppercase tracking-[.15em] text-[#ad542f] hover:underline">Leave another review</button>
+              </div>
+            ) : (
+              <>
+                <span className="mono text-[9px] uppercase tracking-[.2em] text-[#ad542f]">Tell us how it went</span>
+                <h3 className="display mt-2 text-3xl">Leave a review</h3>
+                <form onSubmit={submit} className="mt-6 space-y-4">
+                  <label className="absolute h-0 w-0 overflow-hidden opacity-0" aria-hidden="true">Website
+                    <input tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
+                  </label>
+                  <div>
+                    <p className="text-xs font-semibold text-[#705346]">Your rating</p>
+                    <div className="mt-2"><StarPicker value={rating} onChange={setRating} /></div>
+                  </div>
+                  <input data-testid="input-review-name" required placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-lg border border-[#d8c7b2] bg-[#eee3d2] px-4 py-3 text-sm outline-none placeholder:text-[#9b8170] focus:border-[#ad542f]" />
+                  <textarea data-testid="input-review-comment" rows={3} placeholder="What did you enjoy? (optional)" value={comment} onChange={(e) => setComment(e.target.value)} className="w-full rounded-lg border border-[#d8c7b2] bg-[#eee3d2] px-4 py-3 text-sm outline-none placeholder:text-[#9b8170] focus:border-[#ad542f]" />
+                  {errorMsg && <p role="alert" className="text-sm text-[#b3432f]">{errorMsg}</p>}
+                  <button data-testid="button-submit-review" disabled={submitting} className="inline-flex items-center gap-2 rounded-full bg-[#ad542f] px-6 py-3.5 text-sm font-bold text-[#f9f3e9] transition-transform hover:-translate-y-1 disabled:opacity-50 disabled:hover:translate-y-0">{submitting ? 'Sending…' : 'Submit review'} <Send size={16} /></button>
+                </form>
+              </>
+            )}
+          </div>
+        </Reveal>
+      </div>
+    </div>
+  </section>;
+}
+
 function Footer({ onReserve }: { onReserve: () => void }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const { scrollYProgress: footerProgress } = useScroll({ target: headingRef, offset: ['start end', 'end start'] });
@@ -628,7 +779,7 @@ function Home() {
   const [reservationOpen, setReservationOpen] = useState(false);
   const [orderToast, setOrderToast] = useState('');
   const onOrder = (name: string) => { setOrderToast(`${name} is ready to order`); window.setTimeout(() => setOrderToast(''), 3500); };
-  return <div className="noise min-h-[100dvh] bg-[#f5eee3]"><FoodCursor /><Navigation onReserve={() => setReservationOpen(true)} /><main><Hero onReserve={() => setReservationOpen(true)} /><Story /><MenuSection onOrder={onOrder} /><Ritual /><Gallery /><Catering onReserve={() => setReservationOpen(true)} /><section className="bg-[#e7d9c8] px-5 pb-24 md:px-10 md:pb-32"><div className="mx-auto flex max-w-[1280px] flex-col items-start justify-between gap-8 rounded-[1.25rem] bg-[#d7df9e] p-8 text-[#34261c] md:flex-row md:items-center md:p-12"><div><span className="mono text-[9px] uppercase tracking-[.2em] text-[#59633b]">No waiting by the phone</span><h2 className="display mt-3 text-4xl leading-none md:text-5xl">Hungry now? We get it.</h2><p className="mt-3 text-sm text-[#59633b]">Call ahead or send us a WhatsApp. We will have the coals going.</p></div><div className="flex flex-wrap gap-3"><WhatsAppButton label="Order your mandi" /><CallButton label={<><Phone size={16} /> Call us</>} className="inline-flex items-center gap-2 rounded-full border border-[#59633b]/35 px-5 py-3 text-sm font-bold text-[#34261c]" /></div></div></section></main><Footer onReserve={() => setReservationOpen(true)} />{reservationOpen && <ReservationModal onClose={() => setReservationOpen(false)} />}{orderToast && <OrderToast text={orderToast} />}<FloatingWhatsApp /></div>;
+  return <div className="noise min-h-[100dvh] bg-[#f5eee3]"><FoodCursor /><Navigation onReserve={() => setReservationOpen(true)} /><main><Hero onReserve={() => setReservationOpen(true)} /><Story /><MenuSection onOrder={onOrder} /><Ritual /><Gallery /><Catering onReserve={() => setReservationOpen(true)} /><Reviews /><section className="bg-[#e7d9c8] px-5 pb-24 md:px-10 md:pb-32"><div className="mx-auto flex max-w-[1280px] flex-col items-start justify-between gap-8 rounded-[1.25rem] bg-[#d7df9e] p-8 text-[#34261c] md:flex-row md:items-center md:p-12"><div><span className="mono text-[9px] uppercase tracking-[.2em] text-[#59633b]">No waiting by the phone</span><h2 className="display mt-3 text-4xl leading-none md:text-5xl">Hungry now? We get it.</h2><p className="mt-3 text-sm text-[#59633b]">Call ahead or send us a WhatsApp. We will have the coals going.</p></div><div className="flex flex-wrap gap-3"><WhatsAppButton label="Order your mandi" /><CallButton label={<><Phone size={16} /> Call us</>} className="inline-flex items-center gap-2 rounded-full border border-[#59633b]/35 px-5 py-3 text-sm font-bold text-[#34261c]" /></div></div></section></main><Footer onReserve={() => setReservationOpen(true)} />{reservationOpen && <ReservationModal onClose={() => setReservationOpen(false)} />}{orderToast && <OrderToast text={orderToast} />}<FloatingWhatsApp /></div>;
 }
 
 function StaffBillingEntry() {
