@@ -972,6 +972,13 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
     background: none; border-radius: 0; color: var(--muted); font-size: 18px;
   }
   .settings-tab.active { color: var(--ink); }
+  /* A plain drill-down list shouldn't show a row pre-highlighted as if
+     already open — belt-and-suspenders against the modern theme's filled
+     "active pill" styling (meant for the desktop tab bar) leaking onto a
+     list row here, independent of whatever the JS active-state is. */
+  .settings-modal:not(.mobile-detail) .settings-tab.active {
+    background: none !important; border-color: transparent !important; color: var(--ink) !important;
+  }
 
   .settings-view { display: none !important; padding: 20px; }
   .settings-modal.mobile-detail .settings-view.active { display: block !important; }

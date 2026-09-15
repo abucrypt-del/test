@@ -1840,8 +1840,22 @@ function applySettingsAccessForRole() {
   // the rest of this list <-> detail toggle.
   settingsModal.classList.remove("mobile-detail");
   document.querySelector("#settings-mobile-back").hidden = true;
+  // Reset every tab/view to a single clean state on each open — otherwise
+  // whichever tab was active when Settings was last closed (e.g. "Logs")
+  // never loses its .active class here (only firstVisibleTab gains one),
+  // leaving two tabs marked active at once on the next open. On mobile
+  // that then makes the FIRST of those two (not the one actually tapped)
+  // get cleared on the next tab click, so a stale-active tab lingers
+  // highlighted in the list forever and the real click target's active
+  // state silently fights it — reads as "tapping a settings row does
+  // nothing" even though the underlying view does still switch.
+  document.querySelectorAll(".settings-tab.active").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".settings-view.active").forEach(v => v.classList.remove("active"));
   if (firstVisibleTab && !isMobile) firstVisibleTab.click();
-  else if (firstVisibleTab) firstVisibleTab.classList.add("active");
+  else if (firstVisibleTab) {
+    firstVisibleTab.classList.add("active");
+    document.querySelector(`#${firstVisibleTab.dataset.settingsTab}-view`)?.classList.add("active");
+  }
   return !!firstVisibleTab;
 }
 document.querySelector("#settings-button").addEventListener("click", () => {
@@ -1856,9 +1870,13 @@ document.querySelector("#settings-mobile-back").addEventListener("click", () => 
 });
 settingsModal.addEventListener("click", event => { if (event.target === settingsModal) settingsModal.hidden = true; });
 document.querySelectorAll(".settings-tab").forEach(tab => tab.addEventListener("click", () => {
-  document.querySelector(".settings-tab.active")?.classList.remove("active"); tab.classList.add("active");
+  // Clear every stale-active tab, not just the first match — a leftover
+  // double-active state (see applySettingsAccessForRole) would otherwise
+  // only ever lose one of the two on each click, never fully recovering.
+  document.querySelectorAll(".settings-tab.active").forEach(t => t.classList.remove("active"));
+  tab.classList.add("active");
   document.querySelectorAll(".settings-view").forEach(view => view.classList.remove("active"));
-  document.querySelector(`#${tab.dataset.settingsTab}-view`).classList.add("active");
+  document.querySelector(`#${tab.dataset.settingsTab}-view`)?.classList.add("active");
   if (window.matchMedia("(max-width: 600px)").matches) {
     settingsModal.classList.add("mobile-detail");
     document.querySelector("#settings-mobile-back").hidden = false;
