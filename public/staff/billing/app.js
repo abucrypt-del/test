@@ -139,10 +139,12 @@ const makeCabin = (id, name, orderMode, type = "cabin", token = null) => ({
 let nextOrderNumber = Number(localStorage.getItem("alyazi-order-counter-v1") || "1001");
 function saveOrderCounter() {
   localStorage.setItem("alyazi-order-counter-v1", String(nextOrderNumber));
+  runSync({ manual: false });
 }
 let nextTakeawayNumber = Number(localStorage.getItem("alyazi-takeaway-counter-v1") || "101");
 function saveTakeawayCounter() {
   localStorage.setItem("alyazi-takeaway-counter-v1", String(nextTakeawayNumber));
+  runSync({ manual: false });
 }
 let cabins = JSON.parse(localStorage.getItem("alyazi-cabins-v1") || "null") || Array.from({ length: 5 }, (_, i) => makeCabin(i + 1, `Cabin ${i + 1}`, "Dine In"));
 cabins = cabins.map(cabin => ({ ...cabin, type: cabin.type || "cabin", paidUpfront: cabin.paidUpfront || false, kotSentQuantities: cabin.kotSentQuantities || {}, orderNumber: cabin.orderNumber || null, discountType: cabin.discountType || "percent", discountValue: cabin.discountValue || 0, order: new Map(cabin.order || []) }));
@@ -2450,6 +2452,22 @@ async function pullLiveDataFromCloud() {
     const remoteValue = result?.data?.[key];
     if (remoteValue && remoteValue !== localStorage.getItem(key)) localStorage.setItem(key, remoteValue);
   });
+
+  // Order/token counters: adopt the remote value only if it's HIGHER than
+  // what this device already has — never lower, so a device that's ahead
+  // (it's issued more tickets since the last successful sync) can't get
+  // its own counter walked backwards by a pull, which would risk handing
+  // out a number it already used.
+  const remoteOrderCounter = Number(result?.data?.["alyazi-order-counter-v1"]);
+  if (Number.isFinite(remoteOrderCounter) && remoteOrderCounter > nextOrderNumber) {
+    nextOrderNumber = remoteOrderCounter;
+    saveOrderCounter();
+  }
+  const remoteTakeawayCounter = Number(result?.data?.["alyazi-takeaway-counter-v1"]);
+  if (Number.isFinite(remoteTakeawayCounter) && remoteTakeawayCounter > nextTakeawayNumber) {
+    nextTakeawayNumber = remoteTakeawayCounter;
+    saveTakeawayCounter();
+  }
 
   const remoteBookingsRaw = result?.data?.["alyazi-bookings-v1"];
   if (remoteBookingsRaw) {

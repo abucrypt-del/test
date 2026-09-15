@@ -140,6 +140,26 @@ async function upsertAppSettings(db, snapshot, keys) {
   if (stmts.length) await db.batch(stmts);
 }
 
+// Order/token number counters — every role increments these during normal
+// order-taking, so unlike the settings above these can't be gated to
+// Admin+, and they're stored the same generic way but with a MAX instead
+// of a blind overwrite: the stored value can only ever go up, no matter
+// which device's push lands last or in what order, so two devices
+// numbering tickets around the same time can't push a counter backwards.
+const COUNTER_KEYS = ["alyazi-order-counter-v1", "alyazi-takeaway-counter-v1"];
+
+async function upsertCounters(db, snapshot) {
+  const stmts = COUNTER_KEYS
+    .filter(key => typeof snapshot[key] === "string" && Number.isFinite(Number(snapshot[key])))
+    .map(key => db.prepare(
+      `INSERT INTO app_settings (key, value, updated_at) VALUES (?1, ?2, datetime('now'))
+       ON CONFLICT(key) DO UPDATE SET
+         value = CASE WHEN CAST(excluded.value AS INTEGER) > CAST(app_settings.value AS INTEGER) THEN excluded.value ELSE app_settings.value END,
+         updated_at = datetime('now')`
+    ).bind(key, snapshot[key]));
+  if (stmts.length) await db.batch(stmts);
+}
+
 async function upsertCancellationLogs(db, snapshot) {
   const logs = safeParse(snapshot["alyazi-cancellation-logs-v1"]);
   if (!Array.isArray(logs)) return;
@@ -207,6 +227,7 @@ export async function onRequestPost({ request, env }) {
   await upsertPrintedBills(db, body.data);
   await upsertResetRequests(db, body.data);
   await upsertCancellationLogs(db, body.data);
+  await upsertCounters(db, body.data);
   return json({ ok: true, updatedAt: Date.now() });
 }
 
@@ -290,9 +311,10 @@ export async function onRequestGet({ request, env }) {
     guest: row.guest || "", phone: row.phone || "", total: row.total, createdAt: row.created_at,
   })).reverse();
 
+  const allSettingsKeys = [...STAFF_SETTINGS_KEYS, ...SUPER_ADMIN_SETTINGS_KEYS, ...COUNTER_KEYS];
   const settingsRows = await db.prepare(
-    `SELECT key, value FROM app_settings WHERE key IN (${[...STAFF_SETTINGS_KEYS, ...SUPER_ADMIN_SETTINGS_KEYS].map((_, i) => `?${i + 1}`).join(",")})`
-  ).bind(...STAFF_SETTINGS_KEYS, ...SUPER_ADMIN_SETTINGS_KEYS).all();
+    `SELECT key, value FROM app_settings WHERE key IN (${allSettingsKeys.map((_, i) => `?${i + 1}`).join(",")})`
+  ).bind(...allSettingsKeys).all();
   const settingsByKey = new Map(settingsRows.results.map(row => [row.key, row.value]));
 
   const resetRequestRows = await db.prepare("SELECT * FROM password_reset_requests ORDER BY id").all();
@@ -327,7 +349,7 @@ export async function onRequestGet({ request, env }) {
     "alyazi-cancellation-logs-v1": orNull(cancellationLogs),
     "alyazi-password-reset-requests": orNull(resetRequests),
   };
-  for (const key of [...STAFF_SETTINGS_KEYS, ...SUPER_ADMIN_SETTINGS_KEYS]) {
+  for (const key of allSettingsKeys) {
     if (settingsByKey.has(key)) data[key] = settingsByKey.get(key);
   }
 
