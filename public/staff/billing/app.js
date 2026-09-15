@@ -1684,6 +1684,113 @@ function renderCancellationLogs() {
   }).join("");
 }
 
+// Customer identity here is the guest phone number captured on each
+// printed receipt (printedBills, not sales — sales never stored a guest
+// phone at all, only receipts did). A guest who never gave a phone number
+// can't be attributed to a returning customer, so those receipts are
+// excluded rather than counted as one-off "customers" with no identity.
+function computeCustomerStats() {
+  const byPhone = new Map();
+  printedBills.forEach(bill => {
+    const phone = (bill.phone || "").trim();
+    if (!phone) return;
+    const record = byPhone.get(phone) || { phone, name: "", visits: 0, total: 0, lastVisit: null };
+    record.visits += 1;
+    record.total += bill.total || 0;
+    if (bill.guest && bill.guest.trim()) record.name = bill.guest.trim();
+    const visitDate = new Date(bill.createdAt);
+    if (!record.lastVisit || visitDate > record.lastVisit) record.lastVisit = visitDate;
+    byPhone.set(phone, record);
+  });
+  return [...byPhone.values()].sort((a, b) => b.visits - a.visits || b.total - a.total);
+}
+
+// "Visit-based" RFM-style segmentation — recency (days since last visit)
+// and frequency (total visits) decide the bucket, in the spirit of what
+// restaurant CRM tools show under this same set of names. These specific
+// day thresholds are a reasonable starting point, not a disclosed
+// industry-standard formula — if the shape of these buckets doesn't match
+// how this restaurant's regulars actually behave once there's more data,
+// the thresholds below are the place to tune.
+const CUSTOMER_SEGMENTS = [
+  { key: "vip", label: "VIP", icon: "⭐", tint: "#fbead2", bar: "#e0a72e" },
+  { key: "loyal", label: "Loyal", icon: "💙", tint: "#dfe8fb", bar: "#3b6fd4" },
+  { key: "high-value-at-risk", label: "High Value At Risk", icon: "❗", tint: "#fbdfe0", bar: "#d43b3b" },
+  { key: "inactive-soon", label: "Inactive Soon", icon: "💤", tint: "#dcf0f5", bar: "#2f9bb0" },
+  { key: "dropping-off", label: "Dropping Off", icon: "⛔", tint: "#ececec", bar: "#8b8b8b" },
+  { key: "new", label: "New", icon: "🆕", tint: "#f7ecd9", bar: "#a9762f" },
+  { key: "lost", label: "Lost", icon: "😶", tint: "#ece0fa", bar: "#7c4fc9" },
+  { key: "promising", label: "Promising", icon: "🌱", tint: "#dcf5e3", bar: "#3fa35f" },
+  { key: "others", label: "Others", icon: "➕", tint: "#f0f0ee", bar: "#a3a59b" },
+];
+function computeHighValueThreshold(customers) {
+  if (!customers.length) return Infinity;
+  const totals = customers.map(c => c.total).sort((a, b) => a - b);
+  return totals[Math.min(Math.floor(totals.length * 0.75), totals.length - 1)];
+}
+function classifyCustomerSegment(customer, highValueThreshold) {
+  const daysSince = (Date.now() - customer.lastVisit.getTime()) / 86400000;
+  if (customer.visits === 1) return daysSince <= 30 ? "new" : (daysSince <= 120 ? "dropping-off" : "lost");
+  if (daysSince > 120) return "lost";
+  if (customer.total >= highValueThreshold && daysSince > 60) return "high-value-at-risk";
+  if (customer.visits >= 5 && daysSince <= 45) return "vip";
+  if (customer.visits >= 3 && daysSince <= 60) return "loyal";
+  if (customer.visits === 2 && daysSince <= 45) return "promising";
+  if (daysSince <= 60) return "inactive-soon";
+  if (daysSince <= 120) return "dropping-off";
+  return "others";
+}
+
+function renderCustomers() {
+  const list = document.querySelector("#customer-list");
+  if (!list || currentUser.role !== "Super Admin") return;
+  const customers = computeCustomerStats();
+  document.querySelector("#customer-total-count").textContent = customers.length;
+
+  const highValueThreshold = computeHighValueThreshold(customers);
+  const segmentCounts = new Map(CUSTOMER_SEGMENTS.map(s => [s.key, 0]));
+  customers.forEach(c => {
+    const key = classifyCustomerSegment(c, highValueThreshold);
+    segmentCounts.set(key, (segmentCounts.get(key) || 0) + 1);
+  });
+  const totalForPct = customers.length || 1;
+  document.querySelector("#segment-grid").innerHTML = CUSTOMER_SEGMENTS.map(seg => {
+    const count = segmentCounts.get(seg.key) || 0;
+    const pct = count / totalForPct * 100;
+    return `<div class="segment-card" style="background:${seg.tint};"><span class="segment-icon">${seg.icon}</span><strong>${seg.label}</strong><div class="segment-pct">${pct.toFixed(2)}%</div><div class="segment-count">${count} customer${count === 1 ? "" : "s"}</div><div class="segment-bar-track"><div class="segment-bar-fill" style="width:${count ? Math.max(pct, 4) : 0}%;background:${seg.bar};"></div></div></div>`;
+  }).join("");
+
+  // Visits-per-customer distribution: an ordered/sequential measure (more
+  // visits = more loyal), so one hue getting darker reads as "deeper
+  // loyalty" rather than needing distinct categorical colors for 5 bars.
+  const buckets = [
+    { label: "1 visit", count: 0 },
+    { label: "2 visits", count: 0 },
+    { label: "3 visits", count: 0 },
+    { label: "4 visits", count: 0 },
+    { label: "5+ visits", count: 0 },
+  ];
+  customers.forEach(c => { buckets[Math.min(c.visits, 5) - 1].count += 1; });
+  const maxBucket = Math.max(...buckets.map(b => b.count), 1);
+  const shades = ["#cfe3d7", "#a9cdb9", "#83b79b", "#5da17d", "#31594d"];
+  document.querySelector("#customer-visits-chart").innerHTML = buckets.map((bucket, index) => `<div class="chart-column"><strong>${bucket.count}</strong><div class="chart-bar" style="height:${Math.max(bucket.count / maxBucket * 100, bucket.count ? 8 : 2)}%;background:${shades[index]};"></div><span>${bucket.label}</span></div>`).join("");
+
+  if (customers.length === 0) {
+    list.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--muted);">No customer visits recorded yet — this builds from guest phone numbers on printed receipts.</div>`;
+    return;
+  }
+  list.innerHTML = customers.map(c => `<div class="receipt-item"><div><strong>${escapeHtml(c.name || "Unknown name")}</strong><small>${escapeHtml(c.phone)} · Last visit ${c.lastVisit.toLocaleDateString()}</small></div><div class="receipt-total">${c.visits} visit${c.visits === 1 ? "" : "s"}<br><span style="font-size:10px;color:var(--muted);font-weight:600;">${money(c.total)} total</span></div></div>`).join("");
+}
+document.querySelector("#export-customers")?.addEventListener("click", () => {
+  const customers = computeCustomerStats();
+  if (!customers.length) { showToast("No customers to export"); return; }
+  const rows = [["Name", "Phone", "Visits", "Total spent", "Last visit"]];
+  customers.forEach(c => rows.push([c.name || "Unknown", c.phone, c.visits, money(c.total), c.lastVisit.toLocaleDateString()]));
+  const table = `<table><tr>${rows[0].map(cell => `<th>${cell}</th>`).join("")}</tr>${rows.slice(1).map(row => `<tr>${row.map(cell => `<td>${String(cell).replace(/&/g, "&amp;").replace(/</g, "&lt;")}</td>`).join("")}</tr>`).join("")}</table>`;
+  const blob = new Blob([`<html><head><meta charset="UTF-8"></head><body>${table}</body></html>`], { type: "application/vnd.ms-excel" });
+  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `alyazi-customers-${new Date().toISOString().slice(0, 10)}.xls`; link.click(); URL.revokeObjectURL(link.href); showToast("Customer list exported to Excel");
+});
+
 // Per-device display preference, not synced — see the inline <script> at
 // the top of billing.html's <head> for why the initial value is applied
 // there instead of here (avoids a flash of the other theme on load).
@@ -1718,7 +1825,7 @@ function applySettingsAccessForRole() {
     // Logs is a hard Super Admin-only page, not a delegatable permission —
     // it exists specifically so cancellations are only ever visible to
     // Super Admin, so it never goes through the role permissions table.
-    if (page === "logs") {
+    if (page === "logs" || page === "customers") {
       tab.hidden = role !== "Super Admin";
       if (!tab.hidden && !firstVisibleTab) firstVisibleTab = tab;
       return;
@@ -1727,7 +1834,14 @@ function applySettingsAccessForRole() {
     tab.hidden = !allowed;
     if (allowed && !firstVisibleTab) firstVisibleTab = tab;
   });
-  if (firstVisibleTab) firstVisibleTab.click();
+  const isMobile = window.matchMedia("(max-width: 600px)").matches;
+  // On mobile, Settings opens on the list of pages (not straight into the
+  // first one) — see the tab click handler and #settings-mobile-back for
+  // the rest of this list <-> detail toggle.
+  settingsModal.classList.remove("mobile-detail");
+  document.querySelector("#settings-mobile-back").hidden = true;
+  if (firstVisibleTab && !isMobile) firstVisibleTab.click();
+  else if (firstVisibleTab) firstVisibleTab.classList.add("active");
   return !!firstVisibleTab;
 }
 document.querySelector("#settings-button").addEventListener("click", () => {
@@ -1736,16 +1850,25 @@ document.querySelector("#settings-button").addEventListener("click", () => {
   renderMenuTable(); renderUsers(); renderUpiAccounts(); loadPrintSettings(); updateSession(); renderRolePermissionsTable(); renderReceiptLayoutEditor();
 });
 document.querySelector("#close-settings").addEventListener("click", () => { settingsModal.hidden = true; });
+document.querySelector("#settings-mobile-back").addEventListener("click", () => {
+  settingsModal.classList.remove("mobile-detail");
+  document.querySelector("#settings-mobile-back").hidden = true;
+});
 settingsModal.addEventListener("click", event => { if (event.target === settingsModal) settingsModal.hidden = true; });
 document.querySelectorAll(".settings-tab").forEach(tab => tab.addEventListener("click", () => {
-  document.querySelector(".settings-tab.active").classList.remove("active"); tab.classList.add("active");
+  document.querySelector(".settings-tab.active")?.classList.remove("active"); tab.classList.add("active");
   document.querySelectorAll(".settings-view").forEach(view => view.classList.remove("active"));
   document.querySelector(`#${tab.dataset.settingsTab}-view`).classList.add("active");
+  if (window.matchMedia("(max-width: 600px)").matches) {
+    settingsModal.classList.add("mobile-detail");
+    document.querySelector("#settings-mobile-back").hidden = false;
+  }
   if (tab.dataset.settingsTab === "sales") renderSales();
   if (tab.dataset.settingsTab === "my-sales") renderMySales();
   if (tab.dataset.settingsTab === "receipts") renderReceiptHistory();
   if (tab.dataset.settingsTab === "bookings") renderBookingsList();
   if (tab.dataset.settingsTab === "logs") renderCancellationLogs();
+  if (tab.dataset.settingsTab === "customers") renderCustomers();
   if (tab.dataset.settingsTab === "themes") renderThemeOptions();
 }));
 document.querySelectorAll(".report-range").forEach(button => button.addEventListener("click", () => {
