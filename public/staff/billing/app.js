@@ -2523,6 +2523,18 @@ document.querySelector("#sync-button")?.addEventListener("click", () => runSync(
 // the first thing to dial back.
 setInterval(() => runSync({ manual: false }), 3000);
 runSync({ manual: false });
+// Browsers deliberately throttle timers in a background/unfocused tab to
+// save battery — setInterval above can end up firing far less than every
+// 3s (sometimes once a minute or less) whenever this tab isn't the active
+// one, which is common for a browser tab but rare for a dedicated desktop
+// app window that's usually the only thing open on a POS terminal. That
+// showed up as "the desktop app stays in sync but the web version
+// doesn't." Catching back up the moment the tab is actually looked at
+// again closes that gap without needing a faster (more expensive) timer.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") runSync({ manual: false });
+});
+window.addEventListener("focus", () => runSync({ manual: false }));
 
 // --- Topbar status strip: today's date, plus whether the restaurant is
 // open (a Super Admin-set flag, persisted locally) and actually reachable
