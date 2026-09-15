@@ -996,6 +996,12 @@ function stopKitchenPrepTimer() {
 }
 
 function renderOrder() {
+  const mobileTicketBadge = document.querySelector("#mobile-ticket-badge");
+  if (mobileTicketBadge) {
+    const itemCount = [...order.values()].reduce((sum, item) => sum + item.quantity, 0);
+    mobileTicketBadge.textContent = itemCount;
+    mobileTicketBadge.hidden = itemCount === 0;
+  }
   if (!order.size) {
     orderList.innerHTML = `<div class="empty-ticket"><div class="empty-icon">＋</div><strong>Your ticket is empty</strong><p>Select an item from the menu<br>to start this order.</p></div>`;
   } else {
@@ -2236,6 +2242,41 @@ renderLoginUsers();
 updateSession();
 renderUpiAccounts();
 applyPrintPaperSize();
+
+// --- Mobile app shell: phones get a single-screen-at-a-time nav (Tables /
+// Menu / Ticket / Settings) instead of the desktop's three-column
+// workspace. Desktop is untouched — this only affects layout under the
+// 600px breakpoint (see styles.css), and is otherwise inert.
+function setMobileView(view) {
+  document.querySelectorAll(".mobile-nav button").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.mobileView === view);
+  });
+  document.querySelector(".cabin-section").classList.toggle("mobile-active", view === "tables");
+  document.querySelector(".menu-panel").classList.toggle("mobile-active", view === "menu");
+  document.querySelector(".ticket-panel").classList.toggle("mobile-active", view === "ticket");
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll(".mobile-nav button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (btn.dataset.mobileView === "settings") {
+      // Settings already opens as its own full-screen overlay with its
+      // own tabs — no separate mobile view needed, just trigger it.
+      document.querySelector("#settings-button").click();
+      return;
+    }
+    setMobileView(btn.dataset.mobileView);
+  });
+});
+// Picking a table/takeaway ticket should jump straight to ordering on
+// mobile. Delegated on the container (not the individual tabs, which get
+// fully replaced by innerHTML on every render) so this keeps working no
+// matter how many times the tab list re-renders.
+document.querySelector(".cabin-section").addEventListener("click", event => {
+  if (event.target.closest(".cabin-tab, .takeaway-tab") && window.matchMedia("(max-width: 600px)").matches) {
+    setMobileView("menu");
+  }
+});
+setMobileView("menu");
 
 // --- Sync: snapshots all alyazi-* localStorage keys into IndexedDB every
 // 5s and on demand, then best-effort mirrors the same snapshot to the

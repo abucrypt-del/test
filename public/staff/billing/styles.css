@@ -812,3 +812,107 @@ kbd { padding: 3px 5px; border: 1px solid #dddcd5; border-radius: 3px; backgroun
 @media (max-width: 950px) { .workspace { grid-template-columns: 1fr; } .ticket-panel { min-height: 510px; border-top: 1px solid var(--line); border-left: 0; } .ticket-header { padding-top: 32px; } }
 @media (max-width: 950px) { .ticket-panel { min-height: 0; } .order-list { min-height: 160px; } }
 @media (max-width: 600px) { .topbar { height: 65px; padding: 0 20px; } .service-status, .settings-button span, .sync-status { display: none; } .sync-widget { border-right: none; padding-right: 0; } .topbar-actions { gap: 13px; } .menu-panel { padding: 34px 20px 48px; } .welcome-row { display: block; } .outline-button { margin-top: 24px; } .category-tabs { margin-top: 32px; gap: 20px; } .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; } .menu-card { min-height: 242px; } .food-image { height: 110px; } .card-content { padding: 11px; } .card-content h3 { font-size: 15px; } .card-content p { font-size: 10px; } .ticket-header, .order-list, .ticket-footer { padding-left: 20px; padding-right: 20px; } .order-modes { margin-left: 20px; margin-right: 20px; } .guest-picker { margin-left: 20px; margin-right: 20px; } .settings-modal { max-height: 95vh; } .settings-heading, .settings-view { padding-left: 20px; padding-right: 20px; } .settings-tabs { padding: 0 20px; } .form-grid, .add-menu-form { grid-template-columns: 1fr 1fr; } .form-grid label:first-child { grid-column: span 2; } .add-menu-form .save-button { grid-column: span 2; } }
+
+/* ============================================================
+   Mobile app shell — phones get a real single-screen-at-a-time
+   navigation (Tables / Menu / Ticket / Settings) instead of the
+   desktop's three-column workspace awkwardly squeezed into one
+   long scrolling column. Desktop (Windows/Mac) is untouched: this
+   entire block only applies under 600px, and .mobile-nav is
+   display:none outside it regardless of viewport. See app.js
+   setMobileView() for the show/hide logic this pairs with.
+   ============================================================ */
+.mobile-nav { display: none; }
+@media (max-width: 600px) {
+  body { padding-bottom: 0; }
+  .workspace { display: block; }
+  .cabin-section, .menu-panel, .ticket-panel { display: none; width: 100%; border: 0; }
+  .cabin-section.mobile-active { display: block; padding-bottom: 84px; min-height: calc(100vh - 65px - 64px); }
+  .menu-panel.mobile-active { display: block; padding-bottom: 84px; }
+  .ticket-panel.mobile-active { display: flex; padding-bottom: 84px; min-height: calc(100vh - 65px - 64px); }
+
+  .mobile-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 5; /* below .modal-backdrop (10) so any modal correctly overlays it */
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+  .mobile-nav button {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 2px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 8px;
+  }
+  .mobile-nav button.active { color: var(--sage-dark); background: var(--mobile-accent-tint); }
+  .mobile-nav-icon-wrap { position: relative; display: inline-flex; }
+  .mobile-nav-icon { font-size: 19px; line-height: 1; }
+  .mobile-nav-badge {
+    position: absolute; top: -5px; right: -9px;
+    min-width: 15px; height: 15px; padding: 0 3px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 999px; background: var(--coral); color: white;
+    font-size: 9px; font-weight: 700; line-height: 1;
+  }
+}
+
+/* ------------------------------------------------------------
+   Mobile color system — a teal/white fintech look pulled from a
+   referenced UI kit, applied unconditionally under 600px on top of
+   whichever desktop theme (Classic/Modern) is active. Overriding the
+   same variables everything else already reads means most of the app
+   (buttons, active states, totals) picks this up automatically without
+   needing its own copy of every rule, the same trick the Modern theme
+   uses — the difference is this one is keyed to viewport width, not a
+   data-theme attribute, since desktop stays on its own theme regardless.
+   ------------------------------------------------------------ */
+@media (max-width: 600px) {
+  :root {
+    --ink: #12232e;
+    --muted: #8b93a7;
+    --line: #e7ebf0;
+    --paper: #f4f6f8;
+    --panel: #ffffff;
+    --sage: #1cb5a0;
+    --sage-dark: #0e9488;
+    --coral: #ef5b5b;
+    --gold: #17a398;
+    --mobile-accent-tint: #e3f7f5;
+  }
+  body, .menu-panel, .cabin-section, .ticket-panel { background: var(--paper); }
+  .topbar { background: #ffffff; }
+  .menu-card, .receipt-item, .best-seller-row, .settings-modal, .payment-modal,
+  .account-menu, .whatsapp-card, .report-summary div, .payment-total, .split-payment-panel {
+    border-radius: 18px;
+    box-shadow: 0 2px 10px rgba(18,35,46,.06);
+  }
+  .food-image { border-radius: 18px 18px 0 0; }
+  .cabin-tab, .settings-tab, .save-button, .secondary-action, .checkout-button,
+  .new-takeaway-btn, .payment-method, .report-range, .outline-button, .menu-search,
+  .order-mode, .category-tab, input, select {
+    border-radius: 12px;
+  }
+  .checkout-button, .save-button, #complete-payment {
+    background: linear-gradient(135deg, var(--sage) 0%, var(--sage-dark) 100%);
+  }
+  .add-button { background: var(--sage-dark); }
+  .add-button:hover { background: var(--sage); }
+  .cabin-tab.active, .settings-tab.active, .payment-method.active, .report-range.active,
+  .order-mode.active {
+    background: var(--sage-dark);
+    border-color: var(--sage-dark);
+    color: #ffffff;
+  }
+  .category-tab.active:after { background: var(--sage-dark); }
+  .eyebrow { color: var(--sage-dark); }
+  .chart-bar { background: linear-gradient(180deg, var(--sage) 0%, var(--sage-dark) 100%); }
+}
